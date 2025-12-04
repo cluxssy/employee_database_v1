@@ -11,3 +11,4 @@ ENV/
 data/employee.db
 .DS_Store
 data/uploaded_cvs/*
+!data/uploaded_cvs/.gitkeep
