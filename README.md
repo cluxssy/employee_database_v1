@@ -1,23 +1,54 @@
-# Employee Database Project Structure
+# Ewandz Digital HRMS
 
-## Folder Overview
+A comprehensive Human Resource Management System designed to streamline employee data management. Built with **Python**, **Streamlit**, and **SQLite**.
 
-### `backend/`
-Contains all logic related to data processing, database interactions, and authentication.
-- `database/`: Database initialization scripts and connection logic.
-- `api/`: Functions that handle business logic (e.g., `add_employee`, `get_dashboard_stats`).
+## 🚀 Key Features
 
-### `frontend/`
-Contains the Streamlit user interface code.
-- `components/`: Reusable UI elements (e.g., `sidebar.py`, `login_form.py`).
-- `pages/`: Individual page layouts (e.g., `dashboard.py`, `employee_list.py`).
-- `app.py`: The main entry point for the Streamlit application.
+*   **Centralized Database**: Unified storage for Active and Exited employees.
+*   **Interactive Dashboard**: Real-time KPIs for headcount, attrition, and department distribution.
+*   **Role-Based Access Control (RBAC)**:
+    *   **Admin**: Full system control.
+    *   **HR**: Data entry and management.
+    *   **Management**: Read-only access to dashboards.
+*   **Detailed Profiles**: Track Skills, Assets, HR Activities, and Performance reviews per employee.
+*   **Bulk Operations**: Support for Excel/CSV data uploads.
 
-### `data/`
-Stores the actual data files.
-- `employee.db`: The SQLite database file.
-- `uploaded_cvs/`: Directory where uploaded CV files are saved.
+## 🛠️ Tech Stack
 
-### `docs/`
-Project documentation.
-- `implementation_plan.md`: The roadmap we are following.
+*   **Frontend**: Streamlit
+*   **Backend**: Python
+*   **Database**: SQLite
+*   **Visualization**: Plotly
+*   **Data Handling**: Pandas, OpenPyXL
+
+## 📂 Project Structure
+
+```
+ewandzdigital/
+├── backend/
+│   ├── database/       # Database initialization and connection logic
+│   └── api/            # Business logic functions
+├── frontend/
+│   ├── components/     # Reusable UI widgets
+│   └── pages/          # Streamlit page layouts
+├── data/               # SQLite database file (employee.db)
+├── docs/               # Documentation and guides
+└── requirements.txt    # Project dependencies
+```
+
+## ⚡ Getting Started
+
+1.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2.  **Initialize Database**:
+    ```bash
+    python3 backend/database/init_db.py
+    ```
+
+## 📖 Documentation
+
+*   [Database Guide](docs/database_guide.md): Detailed schema and table relationships.
+*   [Implementation Plan](docs/implementation_plan.md): Project roadmap and phases.
