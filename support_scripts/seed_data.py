@@ -5,14 +5,14 @@ from datetime import datetime, timedelta
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-DB_PATH = os.path.join(BASE_DIR,'employee_dashboard','data', 'employee.db')
+DB_PATH = os.path.join(BASE_DIR, 'data', 'employee.db')
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-FIRST_NAMES = ["Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Ayaan", "Krishna", "Ishaan", "Diya", "Saanvi", "Ananya", "Aadhya", "Pari", "Kiara", "Myra", "Riya", "Anvi", "Angel"]
+FIRST_NAMES = ["Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Ayaan", "Krishna", "Ishaan", "Priyanshu", "Diya", "Saanvi", "Ananya", "Aadhya", "Pari", "Kiara", "Myra", "Riya", "Anvi", "Angel"]
 LAST_NAMES = ["Sharma", "Verma", "Gupta", "Malhotra", "Bhatia", "Mehta", "Joshi", "Nair", "Patel", "Reddy", "Singh", "Kumar", "Das", "Chopra", "Kapoor", "Saxena", "Iyer", "Rao", "Gowda", "Pillai"]
 TEAMS = ["Engineering", "Product", "Sales", "Marketing", "HR", "Finance", "Operations", "Design"]
 DESIGNATIONS = ["Associate", "Senior Associate", "Manager", "Senior Manager", "Lead", "Director", "Intern"]
