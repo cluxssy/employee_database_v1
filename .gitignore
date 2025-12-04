@@ -10,4 +10,4 @@ ENV/
 *.sqlite3
 data/employee.db
 .DS_Store
-data/uploaded_cvs/
+data/uploaded_cvs/*
