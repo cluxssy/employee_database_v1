@@ -4,9 +4,10 @@ import random
 from datetime import datetime, timedelta
 
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'data', 'employee.db')
 
+print(DB_PATH)
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -40,47 +41,65 @@ def generate_dummy_data():
         doj = doj_obj.strftime("%Y-%m-%d")
         dob = (doj_obj - timedelta(days=365*random.randint(22, 40))).strftime("%Y-%m-%d")
         
+        # Status Logic
         status = "Active"
         exit_date = None
         exit_reason = None
+        clearance_status = None
+        
         if random.random() < 0.2: 
             status = "Exited"
             exit_date_obj = doj_obj + timedelta(days=random.randint(100, 800))
             exit_date = exit_date_obj.strftime("%Y-%m-%d")
             exit_reason = random.choice(["Better Opportunity", "Personal Reasons", "Higher Studies", "Relocation"])
+            clearance_status = random.choice(["Cleared", "Pending"])
 
+        # Insert Employee
         c.execute('''
             INSERT OR IGNORE INTO employees (
                 employee_code, name, dob, contact_number, emergency_contact, email_id, doj, 
                 team, designation, employment_type, reporting_manager, location, employment_status, 
-                exit_date, exit_reason
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                pf_included, mediclaim_included, training_completion, notes,
+                exit_date, exit_reason, clearance_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             emp_code, name, dob, f"98{random.randint(10000000, 99999999)}", f"99{random.randint(10000000, 99999999)}",
             email, doj, random.choice(TEAMS), random.choice(DESIGNATIONS), "Full-time", 
-            random.choice(MANAGERS), random.choice(LOCATIONS), status, exit_date, exit_reason
+            random.choice(MANAGERS), random.choice(LOCATIONS), status, 
+            random.choice(["Yes", "No"]), random.choice(["Yes", "No"]), "Completed", "No notes",
+            exit_date, exit_reason, clearance_status
         ))
 
+        # Insert Skill Matrix
         c.execute('''
-            INSERT INTO skill_matrix (employee_code, candidate_name, primary_skillset, secondary_skillset, experience_years)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO skill_matrix (employee_code, candidate_name, primary_skillset, secondary_skillset, experience_years, last_contact_date)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
-            emp_code, name, random.choice(SKILLS), random.choice(SKILLS), round(random.uniform(1, 15), 1)
+            emp_code, name, random.choice(SKILLS), random.choice(SKILLS), round(random.uniform(1, 15), 1), datetime.now().strftime("%Y-%m-%d")
         ))
 
+        # Insert Assets (Only for Active)
         if status == "Active":
             c.execute('''
-                INSERT INTO assets (employee_code, asset_id, issued_to, issue_date, laptop_returned)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO assets (employee_code, asset_id, issued_to, issue_date, laptop_returned, laptop_bag_returned, remove_from_medical, remove_from_pf, email_access_removed, removed_from_groups, relieving_letter_shared)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                emp_code, f"AST-{random.randint(1000, 9999)}", name, doj, False
+                emp_code, f"AST-{random.randint(1000, 9999)}", name, doj, False, False, False, False, False, False, False
+            ))
+        elif status == "Exited":
+             c.execute('''
+                INSERT INTO assets (employee_code, asset_id, issued_to, issue_date, return_date, laptop_returned, laptop_bag_returned, remove_from_medical, remove_from_pf, email_access_removed, removed_from_groups, relieving_letter_shared)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                emp_code, f"AST-{random.randint(1000, 9999)}", name, doj, exit_date, True, True, True, True, True, True, True
             ))
 
+        # Insert Performance
         c.execute('''
-            INSERT INTO performance (employee_code, employee_name, monthly_check_in_notes, manager_feedback)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO performance (employee_code, employee_name, monthly_check_in_notes, manager_feedback, improvement_areas, recognition_rewards)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
-            emp_code, name, "Meeting expectations.", "Good progress this month."
+            emp_code, name, "Meeting expectations.", "Good progress this month.", "Communication", "Star Performer"
         ))
 
     conn.commit()
