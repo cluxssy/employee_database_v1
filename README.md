@@ -1,19 +1,40 @@
 # Ewandz Digital HRMS
 
-A comprehensive Human Resource Management System designed to streamline employee data management. Built with **Python**, **Streamlit**, and **SQLite**.
+## 1. Project Overview
+Build a centralized employee database using Python (Streamlit + SQLite) to manage active and exited employees. The system will support bulk/single uploads, CV management, and role-based access control (HR, Admin, Management).
 
-## 🚀 Key Features
-
-*   **Centralized Database**: Unified storage for Active and Exited employees.
-*   **Interactive Dashboard**: Real-time KPIs for headcount, attrition, and department distribution.
+## 2. Core Requirements
+Based on HR Inputs and Objectives:
+*   **Centralized Database**: Unified view of Active and Exited employees.
+*   **Data Management**:
+    *   **Bulk Upload**: Capability to upload CSV/Excel files for mass data entry.
+    *   **Single Upload**: Form to add individual records.
+    *   **CV Management**: Upload and view CVs (PDF/Doc) linked to employee profiles.
+*   **Search & Filter**:
+    *   Filter by: Name, Skills, Experience, Department/Team, Manager, Location.
 *   **Role-Based Access Control (RBAC)**:
-    *   **Admin**: Full system control.
-    *   **HR**: Data entry and management.
-    *   **Management**: Read-only access to dashboards.
-*   **Detailed Profiles**: Track Skills, Assets, HR Activities, and Performance reviews per employee.
-*   **Bulk Operations**: Support for Excel/CSV data uploads.
+    *   **Admin (System Owner)**:
+        *   *Responsibilities*: Manage user accounts (create/delete logins), reset passwords, full system access.
+        *   *Why*: Ensures system security and maintenance.
+    *   **HR (Data Owner)**:
+        *   *Responsibilities*: Add/Edit employee records, upload CVs, manage bulk uploads, update statuses (Active/Exited).
+        *   *Why*: Responsible for data accuracy and daily management.
+    *   **Management (Viewer)**:
+        *   *Responsibilities*: View dashboards, search for employees/skills, view CVs. Read-only access.
+        *   *Why*: Needs insights for decision-making without risk of altering data.
 
-## 🛠️ Tech Stack
+    **Permission Matrix**:
+    | Feature | Admin | HR | Management |
+    | :--- | :---: | :---: | :---: |
+    | View Dashboard | ✅ | ✅ | ✅ |
+    | Search Employees | ✅ | ✅ | ✅ |
+    | View CVs | ✅ | ✅ | ✅ |
+    | Add/Edit Employees | ✅ | ✅ | ❌ |
+    | Upload Files | ✅ | ✅ | ❌ |
+    | Manage Users | ✅ | ❌ | ❌ |
+*   **Dashboard**: Visual KPIs (Headcount, Attrition, Department distribution).
+
+## 3. Tech Stack
 
 *   **Frontend**: Streamlit
 *   **Backend**: Python
@@ -21,7 +42,7 @@ A comprehensive Human Resource Management System designed to streamline employee
 *   **Visualization**: Plotly
 *   **Data Handling**: Pandas, OpenPyXL
 
-## 📂 Project Structure
+## 4. Project Structure
 
 ```
 ewandzdigital/
@@ -48,7 +69,7 @@ ewandzdigital/
     python3 backend/database/init_db.py
     ```
 
-## 📖 Documentation
+## 5. Documentation
 
 *   [Database Guide](docs/database_guide.md): Detailed schema and table relationships.
 *   [Implementation Plan](docs/implementation_plan.md): Project roadmap and phases.
