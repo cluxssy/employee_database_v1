@@ -1,0 +1,55 @@
+import sqlite3
+import os
+from passlib.hash import pbkdf2_sha256
+
+# Database Path
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'data', 'employee.db')
+
+def verify_user(username, password):
+    """
+    Checks if username exists and password matches the hash.
+    Returns: (True, role) if valid, (False, None) if invalid.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        c.execute("SELECT password_hash, role FROM users WHERE username = ?", (username,))
+        result = c.fetchone()
+        conn.close()
+        
+        if result:
+            db_hash = result[0]
+            role = result[1]
+            
+            # Verify password
+            if pbkdf2_sha256.verify(password, db_hash):
+                return True, role
+                
+        return False, None
+        
+    except Exception as e:
+        print(f"Auth Error: {e}")
+        return False, None
+
+def create_user(username, password, role):
+    """
+    Creates a new user with a hashed password.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Hash the password
+        hashed_pw = pbkdf2_sha256.hash(password)
+        
+        c.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                  (username, hashed_pw, role))
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Create User Error: {e}")
+        return False
