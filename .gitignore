@@ -14,3 +14,4 @@ data/employee.db
 data/uploaded_cvs/*
 !data/uploaded_cvs/.gitkeep
 abc/
+.streamlit
