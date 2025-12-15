@@ -1,75 +1,86 @@
-# Ewandz Digital HRMS
+# EwandzDigital HRMS
 
-## 1. Project Overview
-Build a centralized employee database using Python (Streamlit + SQLite) to manage active and exited employees. The system will support bulk/single uploads, CV management, and role-based access control (HR, Admin, Management).
+A comprehensive Employee Database Management System built with **Streamlit** and **SQLite**. This application simplifies HR operations by providing a centralized platform for managing employee records, tracking assets, monitoring performance, and visualizing workforce analytics.
 
-## 2. Core Requirements
-Based on HR Inputs and Objectives:
-*   **Centralized Database**: Unified view of Active and Exited employees.
-*   **Data Management**:
-    *   **Bulk Upload**: Capability to upload CSV/Excel files for mass data entry.
-    *   **Single Upload**: Form to add individual records.
-    *   **CV Management**: Upload and view CVs (PDF/Doc) linked to employee profiles.
-*   **Search & Filter**:
-    *   Filter by: Name, Skills, Experience, Department/Team, Manager, Location.
-*   **Role-Based Access Control (RBAC)**:
-    *   **Admin (System Owner)**:
-        *   *Responsibilities*: Manage user accounts (create/delete logins), reset passwords, full system access.
-        *   *Why*: Ensures system security and maintenance.
-    *   **HR (Data Owner)**:
-        *   *Responsibilities*: Add/Edit employee records, upload CVs, manage bulk uploads, update statuses (Active/Exited).
-        *   *Why*: Responsible for data accuracy and daily management.
-    *   **Management (Viewer)**:
-        *   *Responsibilities*: View dashboards, search for employees/skills, view CVs. Read-only access.
-        *   *Why*: Needs insights for decision-making without risk of altering data.
+## 🚀 Key Features
 
-    **Permission Matrix**:
-    | Feature | Admin | HR | Management |
-    | :--- | :---: | :---: | :---: |
-    | View Dashboard | ✅ | ✅ | ✅ |
-    | Search Employees | ✅ | ✅ | ✅ |
-    | View CVs | ✅ | ✅ | ✅ |
-    | Add/Edit Employees | ✅ | ✅ | ❌ |
-    | Upload Files | ✅ | ✅ | ❌ |
-    | Manage Users | ✅ | ❌ | ❌ |
-*   **Dashboard**: Visual KPIs (Headcount, Attrition, Department distribution).
+*   **📊 Interactive Dashboard**: Real-time analytics on headcount, department distribution, attrition, and tenure.
+*   **👥 Employee Management**:
+    *   **Add Employee**: Comprehensive form to onboard new hires across 5 data dimensions (Personal, Work, Skills, Assets, Performance/HR).
+    *   **Edit Profile**: Full editing capabilities with tabbed navigation.
+    *   **Listing**: Searchable and filterable table of all employees.
+*   **📄 CV Management**:
+    *   Upload CVs (PDF/Docx) during onboarding or editing.
+    *   **In-App PDF Viewer**: View CVs directly within the application without downloading.
+    *   Version control logic ensures CVs are preserved during profile updates.
+*   **🔐 Role-Based Access Control (RBAC)**:
+    *   **Admin**: Full access + User Management (Create/Delete users, Reset passwords).
+    *   **HR**: Full access to employee data (Add/Edit/View).
+    *   **Management**: Read-only access to Dashboards and Employee Lists.
+*   **🛠️ Asset & Performance Tracking**: Dedicated sections for tracking company assets and performance reviews.
 
-## 3. Tech Stack
+## 🛠️ Tech Stack
 
 *   **Frontend**: Streamlit
-*   **Backend**: Python
-*   **Database**: SQLite
-*   **Visualization**: Plotly
-*   **Data Handling**: Pandas, OpenPyXL
+*   **Backend**: Python, SQLite (Embedded DB)
+*   **Data Processing**: Pandas
+*   **Authentication**: Custom Role-Based Auth (Hashed passwords)
 
-## 4. Project Structure
+## 📂 Project Structure
 
-```
+```text
 ewandzdigital/
 ├── backend/
-│   ├── database/       # Database initialization and connection logic
-│   └── api/            # Business logic functions
+│   ├── auth.py             # Authentication & User Management logic
+│   └── database/           # DB initialization scripts
 ├── frontend/
-│   ├── components/     # Reusable UI widgets
-│   └── pages/          # Streamlit page layouts
-├── data/               # SQLite database file (employee.db)
-├── docs/               # Documentation and guides
-└── requirements.txt    # Project dependencies
+│   ├── app.py              # Main application entry point
+│   ├── assets/             # Images and icons
+│   └── views/              # UI Modules
+│       ├── dashboard.py    # Analytics Dashboard
+│       ├── add_employee.py # Onboarding Form
+│       ├── employee_list.py# Search & List View
+│       ├── profile_view.py # Detailed Profile & CV Viewer
+│       ├── edit_employee.py# Edit Form Logic
+│       └── manage_users.py # Admin User Management
+├── data/
+│   ├── employee.db         # SQLite Database
+│   └── uploaded_cvs/       # Stored CV files
+├── docs/                   # Documentation
+└── requirements.txt        # Dependencies
 ```
 
 ## ⚡ Getting Started
 
-1.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+### 1. Prerequisites
+Ensure you have Python 3.8+ installed.
 
-2.  **Initialize Database**:
-    ```bash
-    python3 backend/database/init_db.py
-    ```
+### 2. Installation
+Clone the repository and install dependencies:
 
-## 5. Documentation
+```bash
+git clone <repository-url>
+cd ewandzdigital
+pip install -r requirements.txt
+```
 
-*   [Database Guide](docs/database_guide.md): Detailed schema and table relationships.
-*   [Implementation Plan](docs/implementation_plan.md): Project roadmap and phases.
+### 3. Database Setup
+Initialize the database with the schema and default admin user:
+
+```bash
+python backend/database/init_db.py
+```
+*(Default Admin: `admin` / `admin123`)*
+
+### 4. Run the Application
+Launch the Streamlit app:
+
+```bash
+streamlit run frontend/app.py
+```
+
+## 📚 Documentation
+
+*   [**User Manual**](docs/user_manual.md): Guide for HR and Admins on using the system.
+*   [**Developer Guide**](docs/developer_guide.md): Technical details, database schema, and code walkthrough.
+*   [**Database Guide**](docs/database_guide.md): Detailed schema and table relationships.
