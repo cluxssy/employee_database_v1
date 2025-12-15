@@ -53,3 +53,49 @@ def create_user(username, password, role):
     except Exception as e:
         print(f"Create User Error: {e}")
         return False
+
+def get_all_users():
+    """
+    Returns a list of all users: [(username, role), ...]
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT username, role FROM users")
+        users = c.fetchall()
+        conn.close()
+        return users
+    except Exception as e:
+        print(f"Fetch Users Error: {e}")
+        return []
+
+def delete_user(username):
+    """
+    Deletes a user by username.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("DELETE FROM users WHERE username = ?", (username,))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Delete User Error: {e}")
+        return False
+
+def update_password(username, new_password):
+    """
+    Updates the password for a user.
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        hashed_pw = pbkdf2_sha256.hash(new_password)
+        c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, username))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Update Password Error: {e}")
+        return False

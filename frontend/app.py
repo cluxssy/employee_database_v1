@@ -9,6 +9,7 @@ from backend.auth import verify_user
 from frontend.views.dashboard import show_dashboard
 from frontend.views.employee_list import show_employee_list
 from frontend.views.add_employee import show_add_employee
+from frontend.views.manage_users import show_manage_users
 
 # page config
 st.set_page_config(
@@ -52,6 +53,7 @@ login_page = st.Page(show_login, title="Login")
 dashboard_page = st.Page(show_dashboard, title="Dashboard", default=True)
 employee_list_page = st.Page(show_employee_list, title="Employee List")
 add_employee_page = st.Page(show_add_employee, title="Add Employee")
+manage_users_page = st.Page(show_manage_users, title="Manage Users")
 
 # navigation logic
 if st.session_state['user_role'] is None:
@@ -62,6 +64,9 @@ else:
     
     if st.session_state['user_role'] in ['Admin', 'HR']:
         pages.append(add_employee_page)
+    
+    if st.session_state['user_role'] == 'Admin':
+        pages.append(manage_users_page)
         
     pg = st.navigation(pages)
     
