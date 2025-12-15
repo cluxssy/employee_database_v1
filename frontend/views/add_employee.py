@@ -12,18 +12,20 @@ def add_employee_record(data):
     c = conn.cursor()
     
     try:
+        # 1. Employees Table
         c.execute('''
             INSERT INTO employees (
                 employee_code, name, dob, contact_number, emergency_contact, email_id, doj, 
                 team, designation, employment_type, reporting_manager, location, 
-                pf_included, mediclaim_included, employment_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
+                pf_included, mediclaim_included, cv_path, employment_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
         ''', (
             data['code'], data['name'], data['dob'], data['phone'], data['emergency'], 
             data['email'], data['doj'], data['team'], data['role'], data['type'], 
-            data['manager'], data['location'], data['pf'], data['mediclaim']
+            data['manager'], data['location'], data['pf'], data['mediclaim'], data['cv_upload']
         ))
         
+        # 2. Skill Matrix Table
         c.execute('''
             INSERT INTO skill_matrix (
                 employee_code,candidate_name,primary_skillset,
@@ -34,19 +36,21 @@ def add_employee_record(data):
             data['experience_years'], data['last_contact_date'], data['cv_upload']
         ))
         
+        # 3. Assets Table
         c.execute('''
             INSERT INTO assets (
                 employee_code,asset_id,issued_to,issue_date,return_date,advance_salary_adjustment,
                 leave_adjustment,laptop_returned,laptop_bag_returned,remove_from_medical,remove_from_pf,
                 email_access_removed,removed_from_groups,relieving_letter_shared
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            data['code'], data.get('assetid'), data.get('issued_to'),data.get('issue_date'),data.get('return_date'),
+            data['code'], data.get('assetid'), data.get('issued_to'), data.get('issue_date'),data.get('return_date'),
             data.get('advance_salary_adjustment'), data.get('leave_adjustment'), data.get('laptop_returned'),
             data.get('laptop_bag_returned'), data.get('remove_from_medical'), data.get('remove_from_pf'),
             data.get('email_access_removed'), data.get('removed_from_groups'), data.get('relieving_letter_shared')
         ))
 
+        # 4. Performance Table
         c.execute('''
             INSERT INTO performance (
                 employee_code, employee_name, monthly_check_in_notes, manager_feedback, 
@@ -58,6 +62,7 @@ def add_employee_record(data):
             data.get('recognition_rewards')
         ))
         
+        # 5. HR Activity Table
         c.execute('''
             INSERT INTO hr_activity (
                 employee_code, employee_name, training_assigned, status, last_follow_up
@@ -130,7 +135,7 @@ def show_add_employee():
         c10, c11, c12 = st.columns(3)
         with c10:
             assetid = st.text_input("Asset ID")
-            issued_to = st.text_input("Issued To")
+            st.write(f"**Issued To:** (Will be set to {name if name else 'Employee Name'})") 
             issue_date = st.date_input("Issue Date", value=date.today())
             return_date = st.date_input("Return Date", value=date.today())
             advance_salary_adjustment = st.text_input("Advance Salary Adjustment")
@@ -150,7 +155,7 @@ def show_add_employee():
         c13, c14 = st.columns(2)
         with c13:
             training_assigned = st.text_input("Training Assigned")
-            status = st.selectbox("Status", ["Active", "Inactive", "On Leave", "Terminated"])
+            status = st.selectbox("Status", ["Active", "Exited"])
         with c14:
             last_follow_up = st.date_input("Last Follow Up", value=date.today())
             monthly_check_in_notes = st.text_area("Monthly Check-in Notes")
@@ -192,9 +197,10 @@ def show_add_employee():
                     "team": team, "role": role, "manager": manager, "pf": pf, "mediclaim": mediclaim,
                     "primary_skillset": skill1, "secondary_skillset": skill2, "experience_years": exyears,
                     "cv_upload": cv_upload, "last_contact_date": last_contact_date,
-                    "assetid": assetid, "issued_to": issued_to, "issue_date": issue_date, "return_date": return_date,
+                    "assetid": assetid, "issued_to": name, # Auto-filled here
+                    "issue_date": issue_date, "return_date": return_date,
                     "advance_salary_adjustment": advance_salary_adjustment, "leave_adjustment": leave_adjustment,
-                    "laptop_returned": laptop_returned == "Yes", "laptop_bag_returned": laptop_bag_returned == "Yes", # Convert to boolean/string as needed? Keeping string logic for now but the DB expects something compatible
+                    "laptop_returned": laptop_returned == "Yes", "laptop_bag_returned": laptop_bag_returned == "Yes",
                     "remove_from_medical": remove_from_medical, "remove_from_pf": remove_from_pf,
                     "email_access_removed": email_access_removed, "removed_from_groups": removed_from_groups,
                     "relieving_letter_shared": relieving_letter_shared,
@@ -205,6 +211,7 @@ def show_add_employee():
                 
                 success, msg = add_employee_record(new_emp)
                 if success:
+                    st.cache_data.clear()
                     st.success(msg)
                     st.balloons()
                 else:

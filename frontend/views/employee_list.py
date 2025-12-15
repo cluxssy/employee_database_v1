@@ -9,7 +9,7 @@ DB_PATH = os.path.join(BASE_DIR, 'data', 'employee.db')
 @st.cache_data
 def get_employees():
     conn = sqlite3.connect(DB_PATH)
-
+    # Select specific columns to keep the table clean
     query = """
         SELECT employee_code, name, team, designation, 
                reporting_manager, location, employment_status, email_id 
@@ -18,6 +18,9 @@ def get_employees():
     df = pd.read_sql(query, conn)
     conn.close()
     return df
+
+from frontend.views.profile_view import view_employee_profile
+
 
 def show_employee_list():
     st.title("Employee Directory")
@@ -56,11 +59,13 @@ def show_employee_list():
         if status_filter != "All":
             filtered_df = filtered_df[filtered_df['employment_status'] == status_filter]
 
-        # Show Data
-        st.dataframe(
+        # Show Data with Selection
+        selection = st.dataframe(
             filtered_df,
             use_container_width=True,
             hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
             column_config={
                 "email_id": st.column_config.LinkColumn("Email"),
                 "employment_status": st.column_config.TextColumn(
@@ -71,7 +76,13 @@ def show_employee_list():
             }
         )
         
-        st.caption(f"Showing {len(filtered_df)} employees")
+        st.caption(f"Showing {len(filtered_df)} employees. Click a row to view details.")
+        
+        # Handle Selection
+        if len(selection.selection.rows) > 0:
+            selected_row_index = selection.selection.rows[0]
+            selected_emp_code = filtered_df.iloc[selected_row_index]['employee_code']
+            view_employee_profile(selected_emp_code)
 
     except Exception as e:
         st.error(f"Failed to load data: {e}")
