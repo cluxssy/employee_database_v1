@@ -4,3 +4,4 @@ plotly
 openpyxl
 passlib
 streamlit-navigation-bar
+xlsxwriter

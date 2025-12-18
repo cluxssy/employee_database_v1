@@ -2,6 +2,10 @@ import streamlit as st
 import sqlite3
 import os
 from datetime import date
+import pandas as pd
+import io
+import xlsxwriter
+
 
 # Get the base directory for file operations
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -17,12 +21,13 @@ def add_employee_record(data):
             INSERT INTO employees (
                 employee_code, name, dob, contact_number, emergency_contact, email_id, doj, 
                 team, designation, employment_type, reporting_manager, location, 
-                pf_included, mediclaim_included, cv_path, employment_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
+                pf_included, mediclaim_included, cv_path, photo_path, employment_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
         ''', (
             data['code'], data['name'], data['dob'], data['phone'], data['emergency'], 
             data['email'], data['doj'], data['team'], data['role'], data['type'], 
-            data['manager'], data['location'], data['pf'], data['mediclaim'], data['cv_upload']
+            data['manager'], data['location'], data['pf'], data['mediclaim'], 
+            data['cv_upload'], data.get('photo_path'), # photo_path added
         ))
         
         # 2. Skill Matrix Table
@@ -81,7 +86,7 @@ def add_employee_record(data):
     finally:
         conn.close()
 
-def show_add_employee():
+def show_single_entry_form():
     st.title("Add New Employee")
     st.markdown("Enter the details of the new joiner below.")
 
@@ -92,6 +97,7 @@ def show_add_employee():
         with c1:
             name = st.text_input("Full Name *")
             dob = st.date_input("Date of Birth", min_value=date(1960, 1, 1))
+            photo = st.file_uploader("Profile Photo", type=['jpg', 'png', 'jpeg']) # Added Photo Upload
         with c2:
             phone = st.text_input("Contact Number *")
             email = st.text_input("Official Email *")
@@ -173,7 +179,22 @@ def show_add_employee():
                 st.error("Please fill in all mandatory fields.")
                 
             else:
-                #CV UPLOAD HANDLING
+                # PROFILE PHOTO HANDLING
+                photo_upload = None
+                if photo is not None:
+                    photo_dir = os.path.join(BASE_DIR, 'data', 'profile_photos')
+                    os.makedirs(photo_dir, exist_ok=True)
+                    
+                    p_ext = os.path.splitext(photo.name)[1]
+                    p_name = f"{code}_{name.replace(' ', '_')}{p_ext}"
+                    p_save = os.path.join(photo_dir, p_name)
+                    
+                    with open(p_save, "wb") as f:
+                        f.write(photo.getbuffer())
+                    
+                    photo_upload = os.path.join("profile_photos", p_name)
+
+                # CV UPLOAD HANDLING
                 cv_upload = None
     
                 if cv is not None:
@@ -196,7 +217,8 @@ def show_add_employee():
                     "location": location, "code": code, "doj": doj, "type": emp_type,
                     "team": team, "role": role, "manager": manager, "pf": pf, "mediclaim": mediclaim,
                     "primary_skillset": skill1, "secondary_skillset": skill2, "experience_years": exyears,
-                    "cv_upload": cv_upload, "last_contact_date": last_contact_date,
+                    "cv_upload": cv_upload, "photo_path": photo_upload, # Added Photo
+                    "last_contact_date": last_contact_date,
                     "assetid": assetid, "issued_to": name, # Auto-filled here
                     "issue_date": issue_date, "return_date": return_date,
                     "advance_salary_adjustment": advance_salary_adjustment, "leave_adjustment": leave_adjustment,
@@ -216,3 +238,123 @@ def show_add_employee():
                     st.balloons()
                 else:
                     st.error(msg)
+                    
+def show_bulk_upload_form():
+    st.subheader("Bulk Upload via Excel/CSV")
+
+    st.markdown("### Step 1: Download Template")
+    st.markdown("Please use the standard template below. Do not change the column headers.")
+    
+    # Create valid dataframe for template
+    template_cols = [
+        "Employee Code", "Full Name", "Date of Birth (YYYY-MM-DD)", "Contact Number", 
+        "Official Email", "Designation", "Department", "Date of Joining (YYYY-MM-DD)",
+        "Employment Type", "Location", "Reporting Manager", "Emergency Contact",
+        "PF Included (Yes/No)", "Mediclaim Included (Yes/No), Primary Skils, Secondary Skills, Years of Experience"
+    ]
+    df_template = pd.DataFrame(columns=template_cols)
+    
+    # Save to buffer
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df_template.to_excel(writer, index=False, sheet_name='Sheet1')
+        
+    st.download_button(
+        label="📥 Download Excel Template",
+        data=buffer.getvalue(),
+        file_name="employee_upload_template.xlsx",
+        mime="application/vnd.ms-excel"
+    )
+    
+    st.divider()
+    
+    # File Upload
+    st.markdown("### Step 2: Upload Data")
+    uploaded_file = st.file_uploader("Upload Excel/CSV File", type=['csv', 'xlsx'])
+    
+    if uploaded_file:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+                
+            st.success(f"File uploaded successfully! Found {len(df)} rows.")
+            st.dataframe(df.head())
+            
+            if st.button("🚀 Process Upload", type="primary"):
+                success_count = 0
+                error_count = 0
+                errors = []
+                
+                progress_bar = st.progress(0)
+                
+                for i, row in df.iterrows():
+                    try:
+                        if pd.isna(row["Employee Code"]) or pd.isna(row["Full Name"]):
+                            raise ValueError("Missing Code or Name")
+
+                        emp_data = {
+                            "code": str(row["Employee Code"]),
+                            "name": str(row["Full Name"]),
+                            "dob": str(row["Date of Birth (YYYY-MM-DD)"]) if not pd.isna(row["Date of Birth (YYYY-MM-DD)"]) else None,
+                            "phone": str(row["Contact Number"]),
+                            "email": str(row["Official Email"]),
+                            "role": str(row["Designation"]),
+                            "team": str(row["Department"]),
+                            "doj": str(row["Date of Joining (YYYY-MM-DD)"]) if not pd.isna(row["Date of Birth (YYYY-MM-DD)"]) else None,
+                            "type": str(row["Employment Type"]),
+                            "location": str(row["Location"]),
+                            "manager": str(row["Reporting Manager"]),
+                            "emergency": str(row["Emergency Contact"]),
+                            "pf": str(row["PF Included (Yes/No)"]),
+                            "mediclaim": str(row["Mediclaim Included (Yes/No)"]),
+                            "cv_upload": None,
+                            "primary_skillset": "", "secondary_skillset": "", "experience_years": "",
+                            "last_contact_date": None,
+                            "assetid": None, "issued_to": str(row["Full Name"]),
+                            "issue_date": None, "return_date": None,
+                            "advance_salary_adjustment": "", "leave_adjustment": "No",
+                            "laptop_returned": False, "laptop_bag_returned": False,
+                            "remove_from_medical": "No", "remove_from_pf": "No",
+                            "email_access_removed": "No", "removed_from_groups": "No",
+                            "relieving_letter_shared": "No",
+                            "training_assigned": "", "status": "Active", "last_follow_up": None,
+                            "monthly_check_in_notes": "", "manager_feedback": "",
+                            "improvement_areas": "", "recognition_rewards": ""
+                        }
+                        
+                        success_flag, msg = add_employee_record(emp_data)
+                        if success_flag:
+                            success_count += 1
+                        else:
+                            error_count += 1
+                            errors.append(f"Row {i+1}: {msg}")
+                            
+                    except Exception as e:
+                        error_count += 1
+                        errors.append(f"Row {i+1}: {e}")
+                    
+                    progress_bar.progress((i + 1) / len(df))
+                
+                st.success(f"Processed: {success_count} added, {error_count} failed.")
+                if errors:
+                    with st.expander("View Error Log"):
+                        for e in errors:
+                            st.write(e)
+                            
+                st.cache_data.clear()
+
+        except Exception as e:
+            st.error(f"Error reading file: {e}")
+
+def show_add_employee():
+    st.title("Add New Employee")
+    st.markdown("Choose your preferred method to add employees.")
+    
+    t1, t2 = st.tabs(["Single Entry", "Bulk Upload"])
+    
+    with t1:
+        show_single_entry_form()
+    with t2:
+        show_bulk_upload_form()

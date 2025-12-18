@@ -16,12 +16,12 @@ def update_employee_details(emp_code, updates):
             UPDATE employees SET 
                 name=?, dob=?, contact_number=?, emergency_contact=?, email_id=?, 
                 location=?, doj=?, employment_type=?, team=?, designation=?, 
-                reporting_manager=?, pf_included=?, mediclaim_included=?, employment_status=?, cv_path=?
+                reporting_manager=?, pf_included=?, mediclaim_included=?, employment_status=?, cv_path=?, photo_path=?
             WHERE employee_code=?
         ''', (
             updates['name'], updates['dob'], updates['phone'], updates['emergency'], updates['email'],
             updates['location'], updates['doj'], updates['type'], updates['team'], updates['role'],
-            updates['manager'], updates['pf'], updates['mediclaim'], updates['status'], updates['cv_path'], emp_code
+            updates['manager'], updates['pf'], updates['mediclaim'], updates['status'], updates['cv_path'], updates['photo_path'], emp_code
         ))
         
         # 2. Update Skill Matrix 
@@ -89,6 +89,7 @@ def render_edit_form(emp_code, data):
         
         # Current CV Path (Preserve if no new upload)
         current_cv_path = emp.get('cv_path') or skills.get('cv_upload')
+        current_photo_path = emp.get('photo_path')
         
         with t_pers:
             c1, c2 = st.columns(2)
@@ -104,9 +105,17 @@ def render_edit_form(emp_code, data):
                 pf = st.selectbox("PF Included", ["Yes", "No"], index=0 if emp.get('pf_included') == 'Yes' else 1)
                 mediclaim = st.selectbox("Mediclaim", ["Yes", "No"], index=0 if emp.get('mediclaim_included') == 'Yes' else 1)
             
-            new_cv = st.file_uploader("Update CV (Leave empty to keep current)", type=['pdf', 'docx'])
-            if current_cv_path:
-                st.caption(f"Current CV: {current_cv_path}")
+            # FILE UPLOADS
+            c_f1, c_f2 = st.columns(2)
+            with c_f1:
+                new_photo = st.file_uploader("Update Photo (Leave empty to keep)", type=['jpg', 'png', 'jpeg'])
+                if current_photo_path:
+                    st.caption(f"Current Photo: {current_photo_path}")
+            
+            with c_f2:
+                new_cv = st.file_uploader("Update CV (Leave empty to keep)", type=['pdf', 'docx'])
+                if current_cv_path:
+                    st.caption(f"Current CV: {current_cv_path}")
 
         with t_work:
             c1, c2 = st.columns(2)
@@ -164,7 +173,19 @@ def render_edit_form(emp_code, data):
         submitted = st.form_submit_button("💾 Save All Changes", type="primary")
 
         if submitted:
+            # 1. Handle Photo
+            final_photo_path = current_photo_path
+            if new_photo:
+                p_dir = os.path.join(BASE_DIR, 'data', 'profile_photos')
+                os.makedirs(p_dir, exist_ok=True)
+                p_ext = os.path.splitext(new_photo.name)[1]
+                p_name = f"{emp_code}_{name.replace(' ', '_')}{p_ext}"
+                p_save = os.path.join(p_dir, p_name)
+                with open(p_save, "wb") as f:
+                    f.write(new_photo.getbuffer())
+                final_photo_path = os.path.join("profile_photos", p_name)
 
+            # 2. Handle CV
             final_cv_path = current_cv_path
             if new_cv:
                 cv_dir = os.path.join(BASE_DIR, 'data', 'uploaded_cvs')
@@ -190,7 +211,8 @@ def render_edit_form(emp_code, data):
                 "rem_med": rem_med, "rem_pf": rem_pf, "email_rem": email_rem, "grp_rem": grp_rem,
                 "letter_shared": letter_shared,
                 "monthly_notes": monthly_notes, "mgr_feed": mgr_feed, "imp_areas": imp_areas, "rewards": rewards,
-                "cv_path": final_cv_path
+                "cv_path": final_cv_path,
+                "photo_path": final_photo_path # Passed to updates
             }
             
             success, msg = update_employee_details(emp_code, updates)

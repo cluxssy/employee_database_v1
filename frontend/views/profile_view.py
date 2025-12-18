@@ -66,7 +66,16 @@ def view_employee_profile(emp_code):
         # Header
         c1, c2, c3 = st.columns([1, 3, 1])
         with c1:
-            st.image("frontend/assets/default_avatar_boy.jpeg", width=100)
+            photo_rel = emp.get('photo_path')
+            photo_shown = False
+            if photo_rel:
+                full_photo_path = os.path.join(BASE_DIR, 'data', photo_rel)
+                if os.path.exists(full_photo_path):
+                    st.image(full_photo_path, width=120)
+                    photo_shown = True
+            
+            if not photo_shown:
+                st.image("frontend/assets/default_avatar_boy.jpeg", width=120)
         with c2:
             st.subheader(f"{emp.get('name', 'N/A')}")
             st.write(f"**{emp.get('designation', 'N/A')}** | {emp.get('team', 'N/A')}")
