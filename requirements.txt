@@ -5,3 +5,7 @@ openpyxl
 passlib
 streamlit-navigation-bar
 xlsxwriter
+fastapi
+uvicorn
+python-multipart
+pydantic
