@@ -1,18 +1,11 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-import sqlite3
 import os
-import sys
 
-# Add parent directory to path so we can import 'backend.auth'
-# This assumes main.py is in /backend/
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.append(parent_dir)
-
-from backend.auth import verify_user, create_user, get_all_users
+# Import Routers
+from backend.routers import auth, employees, assets, performance, hr_activity, dashboard, admin
+from backend.database import DATA_DIR, get_db_connection
 
 app = FastAPI(title="EwandzDigital HRMS API")
 
@@ -32,76 +25,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# STATIC FILES (Images/CVs)
-# Serve the 'data' directory at '/static'
-# We use parent_dir defined above
-DATA_DIR = os.path.join(parent_dir, 'data')
-if not os.path.exists(DATA_DIR):
-    # Fallback to create it if missing, though it should exist
-    os.makedirs(DATA_DIR, exist_ok=True)
-
+# Static Files
 app.mount("/static", StaticFiles(directory=DATA_DIR), name="static")
 
-# DATABASE CONFIG
-DB_PATH = os.path.join(DATA_DIR, 'employee.db')
+# Include Routers
+app.include_router(auth.router)
+app.include_router(employees.router)
+app.include_router(assets.router)
+app.include_router(performance.router)
+app.include_router(hr_activity.router)
+app.include_router(dashboard.router)
+app.include_router(admin.router)
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# MODELS
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-# AUTH ENDPOINTS
+# Ensure data dir
+os.makedirs(DATA_DIR, exist_ok=True)
 
 @app.get("/")
 def read_root():
-    return {"message": "EwandzDigital HRMS API is running "}
-
-@app.post("/api/auth/login")
-def login(request: LoginRequest):
-    print(f"Login attempt: {request.username}") 
-    is_valid, role = verify_user(request.username, request.password)
-    if is_valid:
-        return {"status": "success", "username": request.username, "role": role}
-    else:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-# EMPLOYEE ENDPOINTS (Basic Read)
-
-@app.get("/api/employees")
-def get_employees():
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        # Fetch basic list
-        c.execute("SELECT employee_code, name, designation, team, email_id, photo_path FROM employees")
-        rows = c.fetchall()
-        employees = [dict(row) for row in rows]
-        return employees
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        conn.close()
-
-@app.get("/api/employee/{employee_code}")
-def get_employee(employee_code: int):
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        c.execute("SELECT * FROM employees WHERE employee_code = ?", (employee_code))
-        row = c.fetchone()
-        if row:
-            return dict(row)
-        else:
-            raise HTTPException(status_code=404, detail="Employee not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        conn.close()
+    return {"message": "EwandzDigital HRMS API is running"}
 
 if __name__ == "__main__":
     import uvicorn

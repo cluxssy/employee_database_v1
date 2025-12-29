@@ -35,13 +35,20 @@ def create_tables():
             employment_type TEXT,
             reporting_manager TEXT,
             location TEXT,
+            current_address TEXT,
+            permanent_address TEXT,
+            checklist_bag INTEGER DEFAULT 0,
+            checklist_mediclaim INTEGER DEFAULT 0,
+            checklist_pf INTEGER DEFAULT 0,
+            checklist_email_access INTEGER DEFAULT 0,
+            checklist_groups INTEGER DEFAULT 0,
+            checklist_relieving_letter INTEGER DEFAULT 0,
             employment_status TEXT DEFAULT 'Active',
+            photo_path TEXT,
             cv_path TEXT,
             id_proofs TEXT,
-            laptop_details TEXT,
             pf_included TEXT,
             mediclaim_included TEXT,
-            training_completion TEXT,
             notes TEXT,
             exit_date TEXT,
             exit_reason TEXT,
@@ -84,13 +91,7 @@ def create_tables():
             return_date TEXT,
             advance_salary_adjustment TEXT,
             leave_adjustment TEXT,
-            laptop_returned BOOLEAN,
-            laptop_bag_returned BOOLEAN,
-            remove_from_medical BOOLEAN,
-            remove_from_pf BOOLEAN,
-            email_access_removed BOOLEAN,
-            removed_from_groups BOOLEAN,
-            relieving_letter_shared BOOLEAN
+            laptop_returned BOOLEAN
         )
     ''')
 
@@ -101,6 +102,9 @@ def create_tables():
             employee_code TEXT,
             employee_name TEXT,
             training_assigned TEXT,
+            training_date TEXT,
+            training_duration TEXT,
+            training_status TEXT,
             status TEXT,
             last_follow_up TEXT
         )
@@ -116,6 +120,94 @@ def create_tables():
             manager_feedback TEXT,
             improvement_areas TEXT,
             recognition_rewards TEXT
+        )
+    ''')
+
+    # 7) KRA Library Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS kra_library (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            goal_name TEXT,
+            description TEXT,
+            weightage REAL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 8) KRA Assignments Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS kra_assignments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kra_id INTEGER NOT NULL,
+            employee_code TEXT NOT NULL,
+            period TEXT,
+            status TEXT DEFAULT 'Assigned',
+            self_rating REAL,
+            manager_rating REAL,
+            final_score REAL,
+            comments TEXT,
+            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (kra_id) REFERENCES kra_library(id),
+            FOREIGN KEY (employee_code) REFERENCES employees(employee_code)
+        )
+    ''')
+
+    # 9) Employee Groups Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS employee_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_name TEXT NOT NULL,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 10) Employee Group Members Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS employee_group_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            employee_code TEXT NOT NULL,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES employee_groups(id)
+        )
+    ''')
+
+    # 11) Training Programs Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS training_programs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            program_name TEXT NOT NULL,
+            description TEXT,
+            default_duration TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 12) Training Assignments Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS training_assignments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT NOT NULL,
+            program_id INTEGER NOT NULL,
+            training_date TEXT,
+            duration TEXT,
+            status TEXT DEFAULT 'Pending',
+            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (program_id) REFERENCES training_programs(id)
+        )
+    ''')
+
+    # 13) Audit Logs Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            action TEXT NOT NULL,
+            details TEXT,
+            ip_address TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 

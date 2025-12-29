@@ -9,8 +9,12 @@ import DecryptedText from '../components/Text Animation/DecryptedText';
 
 
 
+import Cookies from 'js-cookie';
+import { useAuth } from '../context/AuthContext';
+
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,14 +29,19 @@ export default function LoginPage() {
       const res = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        // Simple session storage for now (replace with contexts/cookies later)
-        sessionStorage.setItem('user', JSON.stringify(data));
+        // Set Auth Cookie for Middleware Protection
+        Cookies.set('auth_token', 'logged-in', { expires: 1 }); // Expires in 1 day
+
+        // Update global auth state
+        login(data.user);
+
         router.push('/dashboard');
       } else {
         setError(data.detail || 'Login failed');

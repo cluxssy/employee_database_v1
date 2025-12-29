@@ -1,10 +1,6 @@
 import sqlite3
-import os
 from passlib.hash import pbkdf2_sha256
-
-# Database Path
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'data', 'employee.db')
+from backend.database import get_db_connection
 
 def verify_user(username, password):
     """
@@ -12,7 +8,7 @@ def verify_user(username, password):
     Returns: (True, role) if valid, (False, None) if invalid.
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         
         c.execute("SELECT password_hash, role FROM users WHERE username = ?", (username,))
@@ -20,8 +16,8 @@ def verify_user(username, password):
         conn.close()
         
         if result:
-            db_hash = result[0]
-            role = result[1]
+            db_hash = result['password_hash']
+            role = result['role']
             
             # Verify password
             if pbkdf2_sha256.verify(password, db_hash):
@@ -38,7 +34,7 @@ def create_user(username, password, role):
     Creates a new user with a hashed password.
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         
         # Hash the password
@@ -59,10 +55,10 @@ def get_all_users():
     Returns a list of all users: [(username, role), ...]
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute("SELECT username, role FROM users")
-        users = c.fetchall()
+        users = c.fetchall() 
         conn.close()
         return users
     except Exception as e:
@@ -74,7 +70,7 @@ def delete_user(username):
     Deletes a user by username.
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute("DELETE FROM users WHERE username = ?", (username,))
         conn.commit()
@@ -89,7 +85,7 @@ def update_password(username, new_password):
     Updates the password for a user.
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         hashed_pw = pbkdf2_sha256.hash(new_password)
         c.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_pw, username))

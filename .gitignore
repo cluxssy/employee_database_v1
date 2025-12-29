@@ -9,11 +9,7 @@ venv/
 ENV/
 *.db
 *.sqlite3
-data/employee.db
 .DS_Store
-data/uploaded_cvs/*
-!data/uploaded_cvs/.gitkeep
 abc/
 .streamlit
-.data/profile_photos/*
-!data/profile_photos/.gitkeep
+data/
