@@ -26,6 +26,9 @@ from passlib.hash import pbkdf2_sha256
 def verify_password(plain_password, hashed_password):
     return pbkdf2_sha256.verify(plain_password, hashed_password)
 
+def get_password_hash(password):
+    return pbkdf2_sha256.hash(password)
+
 def create_session_token() -> str:
     """Generate a secure session token"""
     return secrets.token_urlsafe(32)

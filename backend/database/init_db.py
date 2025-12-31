@@ -37,6 +37,7 @@ def create_tables():
             location TEXT,
             current_address TEXT,
             permanent_address TEXT,
+            education_details TEXT,
             checklist_bag INTEGER DEFAULT 0,
             checklist_mediclaim INTEGER DEFAULT 0,
             checklist_pf INTEGER DEFAULT 0,
@@ -62,7 +63,27 @@ def create_tables():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT CHECK(role IN ('HR', 'Admin', 'Management')) NOT NULL
+            role TEXT CHECK(role IN ('HR', 'Admin', 'Management', 'Employee')) NOT NULL,
+            employee_code TEXT,
+            is_active INTEGER DEFAULT 1,
+            last_login TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 2b) Onboarding Invites Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS onboarding_invites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token TEXT UNIQUE NOT NULL,
+            email TEXT NOT NULL,
+            name TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'Employee',
+            department TEXT,
+            designation TEXT,
+            status TEXT DEFAULT 'Pending',  -- Pending, Completed, Expired
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
         )
     ''')
 
@@ -106,7 +127,19 @@ def create_tables():
             training_duration TEXT,
             training_status TEXT,
             status TEXT,
-            last_follow_up TEXT
+            last_follow_up TEXT,
+            program_id INTEGER
+        )
+    ''')
+    
+    # 5b) Training Library (Actual table used by code)
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS training_library (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            program_name TEXT NOT NULL,
+            description TEXT,
+            default_duration TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 
@@ -174,7 +207,7 @@ def create_tables():
         )
     ''')
 
-    # 11) Training Programs Table
+    # 11) Training Programs Table (Legacy/Unused?)
     c.execute('''
         CREATE TABLE IF NOT EXISTS training_programs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -185,7 +218,7 @@ def create_tables():
         )
     ''')
 
-    # 12) Training Assignments Table
+    # 12) Training Assignments Table (Legacy/Unused?)
     c.execute('''
         CREATE TABLE IF NOT EXISTS training_assignments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -208,6 +241,42 @@ def create_tables():
             details TEXT,
             ip_address TEXT,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 14) Notifications Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT,
+            title TEXT,
+            message TEXT,
+            type TEXT,
+            is_read INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 15) Employee Documents Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS employee_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT,
+            document_type TEXT,
+            document_name TEXT,
+            file_path TEXT,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            uploaded_by TEXT
+        )
+    ''')
+
+    # 16) Sessions Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_token TEXT PRIMARY KEY,
+            user_id INTEGER,
+            expires_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
 

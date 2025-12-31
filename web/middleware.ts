@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
     // - /_next/* (Next.js assets)
     // - /static/* (Static assets if served via Next.js, though ours are likely backend)
     // - /logo.png, etc.
-    const isPublicPath = pathname === '/' || pathname.startsWith('/_next') || pathname.startsWith('/static') || pathname.includes('.');
+    const isPublicPath = pathname === '/' || pathname.startsWith('/onboard') || pathname.startsWith('/_next') || pathname.startsWith('/static') || pathname.includes('.');
 
     // 2. If User is NOT logged in and tries to access a protected route -> Redirect to Login
     if (!token && !isPublicPath) {

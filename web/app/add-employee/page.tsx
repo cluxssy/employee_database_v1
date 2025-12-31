@@ -2,17 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, User, Briefcase, FileText, Upload, Save, MapPin } from 'lucide-react';
+import { ArrowLeft, User, Briefcase, FileText, Upload, Save, MapPin, Send, List, UserPlus, Copy, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import StaggeredMenu from '../../components/navBar';
 import Waves from '../../components/Background/Waves';
 import { useAuth } from '../../context/AuthContext';
 import { getMenuItems } from '../../utils/menu';
 
+// Types
+interface Invite {
+    id: number;
+    token: string;
+    email: string;
+    name: string;
+    role: string;
+    department: string;
+    status: string;
+    created_at: string;
+}
+
 export default function AddEmployee() {
     const router = useRouter();
     const { user, isLoading: authLoading } = useAuth();
-
-    // Auth Check
     const isAuthorized = user && ['Admin', 'HR'].includes(user.role);
 
     useEffect(() => {
@@ -22,8 +32,282 @@ export default function AddEmployee() {
         }
     }, [authLoading, isAuthorized, user, router]);
 
+    const [activeTab, setActiveTab] = useState<'invite' | 'status' | 'manual'>('invite');
+    const menuItems = getMenuItems(user?.role);
 
+    if (!isAuthorized) return null;
 
+    return (
+        <div className="min-h-screen bg-brand-black text-white relative">
+            <Waves
+                lineColor="#230a46ff"
+                backgroundColor="rgba(0, 0, 0, 0.2)"
+                waveSpeedX={0.02}
+                waveSpeedY={0.01}
+                waveAmpX={40}
+                waveAmpY={20}
+                className="fixed top-0 left-0 w-full h-screen z-0 pointer-events-none"
+            />
+
+            <StaggeredMenu
+                position="right"
+                isFixed={true}
+                items={menuItems}
+                logoUrl="/logo.png"
+                accentColor="var(--color-brand-purple)"
+                menuBackgroundColor="#000000ff"
+                itemTextColor="#ffffff"
+            />
+
+            <main className="mx-auto max-w-5xl p-6 pt-32 relative z-10 animate-fade-in-up">
+
+                {/* Header */}
+                <div className="flex justify-between items-center mb-6">
+                    <button
+                        onClick={() => router.back()}
+                        className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft size={20} /> Back
+                    </button>
+                    <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+                        Add New Employee
+                    </h1>
+                </div>
+
+                {/* Tabs */}
+                <div className="flex gap-4 mb-8 border-b border-[#333] pb-1">
+                    <TabButton
+                        active={activeTab === 'invite'}
+                        onClick={() => setActiveTab('invite')}
+                        icon={<Send size={18} />}
+                        label="Send Invitation"
+                    />
+                    <TabButton
+                        active={activeTab === 'status'}
+                        onClick={() => setActiveTab('status')}
+                        icon={<List size={18} />}
+                        label="Invitation Status"
+                    />
+                    <TabButton
+                        active={activeTab === 'manual'}
+                        onClick={() => setActiveTab('manual')}
+                        icon={<UserPlus size={18} />}
+                        label="Manual Entry (Legacy)"
+                    />
+                </div>
+
+                {/* Content */}
+                <div className="min-h-[500px]">
+                    {activeTab === 'invite' && <InviteForm />}
+                    {activeTab === 'status' && <InviteStatusList />}
+                    {activeTab === 'manual' && <ManualEntryForm router={router} />}
+                </div>
+
+            </main>
+        </div>
+    );
+}
+
+// --- Tab Button ---
+function TabButton({ active, onClick, icon, label }: any) {
+    return (
+        <button
+            onClick={onClick}
+            className={`flex items-center gap-2 px-6 py-3 rounded-t-xl font-bold transition-all ${active
+                ? 'bg-[#1a1a1a] border border-[#333] border-b-brand-black text-brand-purple translate-y-[1px]'
+                : 'text-gray-500 hover:text-white hover:bg-[#111]'
+                }`}
+        >
+            {icon} {label}
+        </button>
+    );
+}
+
+// --- 1. Invite Form ---
+function InviteForm() {
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '', link: '' });
+    const [form, setForm] = useState({ name: '', email: '', role: 'Employee', department: '', designation: '' });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage({ type: '', text: '', link: '' });
+
+        try {
+            const res = await fetch('http://localhost:8000/api/onboarding/invite', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form)
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                const fullLink = `${window.location.origin}${data.link}`;
+                setMessage({ type: 'success', text: 'Invitation created details!', link: fullLink });
+                setForm({ name: '', email: '', role: 'Employee', department: '', designation: '' });
+            } else {
+                setMessage({ type: 'error', text: data.detail || 'Failed to send invite', link: '' });
+            }
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Network error', link: '' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8 max-w-2xl mx-auto">
+            <div className="flex items-center gap-3 mb-6 border-b border-[#222] pb-4">
+                <div className="p-3 rounded-full bg-brand-purple/20 text-brand-purple">
+                    <Send size={24} />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold text-white">Send Onboarding Invitation</h2>
+                    <p className="text-sm text-gray-500">Employee will receive a link to set up their account.</p>
+                </div>
+            </div>
+
+            {message.text && (
+                <div className={`p-4 rounded-xl mb-6 border ${message.type === 'success' ? 'bg-green-900/20 border-green-800 text-green-300' : 'bg-red-900/20 border-red-800 text-red-300'}`}>
+                    <div className="font-bold mb-1">{message.text}</div>
+                    {message.link && (
+                        <div className="flex items-center gap-2 mt-2 bg-black/50 p-2 rounded text-sm font-mono text-gray-300 break-all">
+                            {message.link}
+                            <button onClick={() => navigator.clipboard.writeText(message.link)} className="p-1 hover:bg-white/10 rounded">
+                                <Copy size={16} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <InputField label="Full Name" value={form.name} onChange={(e: any) => setForm({ ...form, name: e.target.value })} required />
+                <InputField label="Email Address" type="email" value={form.email} onChange={(e: any) => setForm({ ...form, email: e.target.value })} required />
+
+                <div className="grid grid-cols-2 gap-4">
+                    <InputField label="Department / Team" value={form.department} onChange={(e: any) => setForm({ ...form, department: e.target.value })} />
+                    <InputField label="Designation" value={form.designation} onChange={(e: any) => setForm({ ...form, designation: e.target.value })} />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                    <label className="text-xs text-gray-500 uppercase tracking-wider">System Role</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {['Employee', 'HR', 'Admin', 'Management'].map(role => (
+                            <button
+                                key={role}
+                                type="button"
+                                onClick={() => setForm({ ...form, role })}
+                                className={`py-2 px-4 rounded-lg border text-sm transition-all ${form.role === role
+                                    ? 'bg-brand-purple text-white border-brand-purple'
+                                    : 'border-[#333] text-gray-400 hover:border-gray-500'
+                                    }`}
+                            >
+                                {role}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-brand-purple to-purple-600 text-white font-bold shadow-lg shadow-brand-purple/20 hover:shadow-brand-purple/40 hover:scale-[1.01] transition-all flex items-center justify-center gap-2"
+                >
+                    {loading ? 'Processing...' : <><Send size={18} /> Send Invitation</>}
+                </button>
+            </form>
+        </div>
+    );
+}
+
+// --- 2. Invite Status List ---
+function InviteStatusList() {
+    const [invites, setInvites] = useState<Invite[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchInvites = async () => {
+        try {
+            const res = await fetch('http://localhost:8000/api/onboarding/invites', { credentials: 'include' });
+            if (res.ok) setInvites(await res.json());
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    useEffect(() => { fetchInvites(); }, []);
+
+    const handleRevoke = async (id: number) => {
+        if (!confirm("Are you sure?")) return;
+        await fetch(`http://localhost:8000/api/onboarding/invite/${id}`, { method: 'DELETE', credentials: 'include' });
+        fetchInvites();
+    };
+
+    if (loading) return <div className="text-gray-500 text-center py-10">Loading invites...</div>;
+
+    return (
+        <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl overflow-hidden p-6">
+            <div className="flex items-center gap-3 mb-6 border-b border-[#222] pb-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2"><Clock className="text-blue-500" /> Pending Invitations</h2>
+            </div>
+
+            {invites.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">No pending invitations found.</div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="text-xs text-gray-500 uppercase border-b border-[#333]">
+                                <th className="p-4">Name / Email</th>
+                                <th className="p-4">Role</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4">Sent At</th>
+                                <th className="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {invites.map(invite => (
+                                <tr key={invite.id} className="border-b border-[#222]/50 hover:bg-[#1a1a1a]">
+                                    <td className="p-4">
+                                        <div className="font-bold text-white">{invite.name}</div>
+                                        <div className="text-sm text-gray-500">{invite.email}</div>
+                                    </td>
+                                    <td className="p-4 text-sm text-gray-300">{invite.role}</td>
+                                    <td className="p-4">
+                                        <span className={`px-2 py-1 rounded text-xs border ${invite.status === 'Completed' ? 'bg-green-900/20 text-green-400 border-green-900' :
+                                            invite.status === 'Revoked' ? 'bg-red-900/20 text-red-400 border-red-900' :
+                                                'bg-yellow-900/20 text-yellow-400 border-yellow-900'
+                                            }`}>
+                                            {invite.status}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-sm text-gray-500 border-gray-700">
+                                        {new Date(invite.created_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        {invite.status === 'Pending' && (
+                                            <button
+                                                onClick={() => handleRevoke(invite.id)}
+                                                className="text-red-400 hover:text-red-300 p-2 hover:bg-red-900/20 rounded"
+                                                title="Revoke"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// --- 3. Manual Entry Form (Legacy) ---
+function ManualEntryForm({ router }: any) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -43,10 +327,6 @@ export default function AddEmployee() {
         photo: null, cv: null, id_proof: null
     });
 
-    if (!isAuthorized) return null;
-
-    const menuItems = getMenuItems(user?.role);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -63,7 +343,6 @@ export default function AddEmployee() {
         setLoading(true);
         setMessage({ type: '', text: '' });
 
-        // Basic Client Validation
         if (!formData.code.startsWith('EMP')) {
             setMessage({ type: 'error', text: 'Employee Code must start with "EMP".' });
             setLoading(false);
@@ -73,7 +352,11 @@ export default function AddEmployee() {
         try {
             const data = new FormData();
             Object.entries(formData).forEach(([key, value]) => {
-                data.append(key, value);
+                if (key === 'experience_years') {
+                    if (value) data.append(key, value.toString());
+                } else {
+                    data.append(key, value);
+                }
             });
 
             if (files.photo) data.append('photo_file', files.photo);
@@ -83,7 +366,7 @@ export default function AddEmployee() {
             const res = await fetch('http://localhost:8000/api/employee', {
                 method: 'POST',
                 credentials: 'include',
-                body: data // FormData handles headers
+                body: data
             });
 
             const result = await res.json();
@@ -91,171 +374,119 @@ export default function AddEmployee() {
                 setMessage({ type: 'success', text: 'Employee added successfully!' });
                 setTimeout(() => router.push('/employee-directory'), 2000);
             } else {
-                setMessage({ type: 'error', text: result.detail || 'Failed to add employee' });
+                const errorText = typeof result.detail === 'string'
+                    ? result.detail
+                    : Array.isArray(result.detail)
+                        ? result.detail.map((err: any) => err.msg).join(', ')
+                        : 'Failed to add employee';
+                setMessage({ type: 'error', text: errorText });
             }
         } catch (err) {
-            setMessage({ type: 'error', text: 'An error occurred. Please try again.' });
+            setMessage({ type: 'error', text: 'An error occurred.' });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-brand-black text-white relative">
-            <Waves
-                lineColor="#230a46ff"
-                backgroundColor="rgba(0, 0, 0, 0.2)"
-                waveSpeedX={0.02}
-                waveSpeedY={0.01}
-                waveAmpX={40}
-                waveAmpY={20}
-                friction={0.9}
-                tension={0.01}
-                maxCursorMove={120}
-                xGap={12}
-                yGap={36}
-                className="fixed top-0 left-0 w-full h-screen z-0 pointer-events-none"
-            />
+        <div className="animate-fade-in-up">
+            {message.text && (
+                <div className={`p-4 rounded-xl mb-6 ${message.type === 'success' ? 'bg-green-900/30 text-green-300 border border-green-800' : 'bg-red-900/30 text-red-300 border border-red-800'}`}>
+                    {message.text}
+                </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Section 1: Personal Details */}
+                <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
+                    <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white border-b border-[#222] pb-4">
+                        <User className="text-brand-purple" size={20} /> Personal Details
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <InputField label="Employee Code (e.g. EMP001)" name="code" value={formData.code} onChange={handleChange} required placeholder="EMP..." />
+                        <InputField label="Full Name" name="name" value={formData.name} onChange={handleChange} required />
+                        <InputField label="Date of Birth" name="dob" type="date" value={formData.dob} onChange={handleChange} required />
+                        <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required />
+                        <InputField label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} required placeholder="9876543210" />
+                        <InputField label="Emergency Contact" name="emergency" value={formData.emergency} onChange={handleChange} required placeholder="9876543210" />
 
-            <StaggeredMenu
-                position="right"
-                isFixed={true}
-                items={menuItems}
-                displayItemNumbering={true}
-                menuButtonColor="#fff"
-                openMenuButtonColor="#fff"
-                changeMenuColorOnOpen={true}
-                colors={['#B19EEF', '#5227FF']}
-                logoUrl="/logo.png"
-                accentColor="var(--color-brand-purple)"
-                menuBackgroundColor="#000000ff"
-                itemTextColor="#ffffff"
-                smartHeader={true}
-                headerColor="#000000ff"
-            />
-
-            <main className="mx-auto max-w-5xl p-6 pt-32 relative z-10 animate-fade-in-up">
-
-                <div className="flex justify-between items-center mb-8">
-                    <button
-                        onClick={() => router.back()}
-                        className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-                    >
-                        <ArrowLeft size={20} /> Back
-                    </button>
-                    <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
-                        Add New Employee
-                    </h1>
+                        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <TextAreaField label="Current Address" name="current_address" value={formData.current_address} onChange={handleChange} />
+                            <TextAreaField label="Permanent Address" name="permanent_address" value={formData.permanent_address} onChange={handleChange} />
+                        </div>
+                    </div>
                 </div>
 
-                {message.text && (
-                    <div className={`p-4 rounded-xl mb-6 ${message.type === 'success' ? 'bg-green-900/30 text-green-300 border border-green-800' : 'bg-red-900/30 text-red-300 border border-red-800'}`}>
-                        {message.text}
-                    </div>
-                )}
+                {/* Section 2: Employment Details */}
+                <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
+                    <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white border-b border-[#222] pb-4">
+                        <Briefcase className="text-blue-500" size={20} /> Employment Details
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <InputField label="Team / Dept" name="team" value={formData.team} onChange={handleChange} required />
+                        <InputField label="Designation" name="role" value={formData.role} onChange={handleChange} required />
+                        <InputField label="Reporting Manager" name="manager" value={formData.manager} onChange={handleChange} required />
+                        <InputField label="Date of Joining" name="doj" type="date" value={formData.doj} onChange={handleChange} required />
+                        <InputField label="Office Location" name="location" value={formData.location} onChange={handleChange} />
 
-                <form onSubmit={handleSubmit} className="space-y-8">
-
-                    {/* Section 1: Personal Details */}
-                    <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
-                        <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white border-b border-[#222] pb-4">
-                            <User className="text-brand-purple" size={20} /> Personal Details
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <InputField label="Employee Code (e.g. EMP001)" name="code" value={formData.code} onChange={handleChange} required placeholder="EMP..." />
-                            <InputField label="Full Name" name="name" value={formData.name} onChange={handleChange} required />
-                            <InputField label="Date of Birth" name="dob" type="date" value={formData.dob} onChange={handleChange} required />
-                            <InputField label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} required />
-                            <InputField label="Phone Number (10 digits)" name="phone" value={formData.phone} onChange={handleChange} required placeholder="9876543210" />
-                            <InputField label="Emergency Contact" name="emergency" value={formData.emergency} onChange={handleChange} required placeholder="9876543210" />
-
-                            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <TextAreaField label="Current Address" name="current_address" value={formData.current_address} onChange={handleChange} />
-                                <TextAreaField label="Permanent Address" name="permanent_address" value={formData.permanent_address} onChange={handleChange} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Section 2: Employment Details */}
-                    <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
-                        <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white border-b border-[#222] pb-4">
-                            <Briefcase className="text-blue-500" size={20} /> Employment Details
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <InputField label="Team / Dept" name="team" value={formData.team} onChange={handleChange} required />
-                            <InputField label="Designation" name="role" value={formData.role} onChange={handleChange} required />
-                            <InputField label="Reporting Manager" name="manager" value={formData.manager} onChange={handleChange} required />
-                            <InputField label="Date of Joining" name="doj" type="date" value={formData.doj} onChange={handleChange} required />
-                            <InputField label="Office Location" name="location" value={formData.location} onChange={handleChange} />
-
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs text-gray-500 uppercase tracking-wider">Employment Type</label>
-                                <select
-                                    name="type"
-                                    value={formData.type}
-                                    onChange={handleChange}
-                                    className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
-                                >
-                                    <option value="Full Time">Full Time</option>
-                                    <option value="Part Time">Part Time</option>
-                                    <option value="Contractual">Contractual</option>
-                                    <option value="Internship">Internship</option>
-                                </select>
-                            </div>
-
-                            <SelectField label="PF Included?" name="pf" value={formData.pf} onChange={handleChange} options={['Yes', 'No']} />
-                            <SelectField label="Mediclaim Included?" name="mediclaim" value={formData.mediclaim} onChange={handleChange} options={['Yes', 'No']} />
-                        </div>
-                        <div className="mt-6">
-                            <TextAreaField label="Notes" name="notes" value={formData.notes} onChange={handleChange} />
-                        </div>
-                    </div>
-
-                    {/* Section 3: Skills & Documents */}
-                    <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
-                        <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white border-b border-[#222] pb-4">
-                            <FileText className="text-yellow-500" size={20} /> Skills & Documents
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            <InputField label="Primary Skills" name="primary_skillset" value={formData.primary_skillset} onChange={handleChange} />
-                            <InputField label="Secondary Skills" name="secondary_skillset" value={formData.secondary_skillset} onChange={handleChange} />
-                            <InputField label="Years Experience" name="experience_years" type="number" step="0.1" value={formData.experience_years} onChange={handleChange} />
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs text-gray-500 uppercase tracking-wider">Employment Type</label>
+                            <select
+                                name="type"
+                                value={formData.type}
+                                onChange={handleChange}
+                                className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+                            >
+                                <option value="Full Time">Full Time</option>
+                                <option value="Part Time">Part Time</option>
+                                <option value="Contractual">Contractual</option>
+                                <option value="Internship">Internship</option>
+                            </select>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <FileUpload label="Profile Photo" file={files.photo} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, 'photo')} />
-                            <FileUpload label="Resume / CV" file={files.cv} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, 'cv')} />
-                            <FileUpload label="ID Proofs" file={files.id_proof} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, 'id_proof')} />
-                        </div>
+                        <SelectField label="PF Included?" name="pf" value={formData.pf} onChange={handleChange} options={['Yes', 'No']} />
+                        <SelectField label="Mediclaim Included?" name="mediclaim" value={formData.mediclaim} onChange={handleChange} options={['Yes', 'No']} />
+                    </div>
+                    <div className="mt-6">
+                        <TextAreaField label="Notes" name="notes" value={formData.notes} onChange={handleChange} />
+                    </div>
+                </div>
+
+                {/* Section 3: Skills & Documents */}
+                <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
+                    <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-white border-b border-[#222] pb-4">
+                        <FileText className="text-yellow-500" size={20} /> Skills & Documents
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <InputField label="Primary Skills" name="primary_skillset" value={formData.primary_skillset} onChange={handleChange} />
+                        <InputField label="Secondary Skills" name="secondary_skillset" value={formData.secondary_skillset} onChange={handleChange} />
+                        <InputField label="Years Experience" name="experience_years" type="number" step="0.1" value={formData.experience_years} onChange={handleChange} />
                     </div>
 
-                    {/* Submit Actions */}
-                    <div className="flex justify-end gap-4 pt-4 pb-20">
-                        <button
-                            type="button"
-                            onClick={() => router.back()}
-                            className="px-6 py-3 rounded-xl bg-transparent border border-[#333] text-gray-400 hover:text-white hover:border-gray-500 transition-all font-medium"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className={`px-8 py-3 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:bg-opacity-90 transition-all flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            <Save size={18} />
-                            {loading ? 'Saving...' : 'Save Employee'}
-                        </button>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FileUpload label="Profile Photo" file={files.photo} onChange={(e) => handleFileChange(e, 'photo')} />
+                        <FileUpload label="Resume / CV" file={files.cv} onChange={(e) => handleFileChange(e, 'cv')} />
+                        <FileUpload label="ID Proofs" file={files.id_proof} onChange={(e) => handleFileChange(e, 'id_proof')} />
                     </div>
+                </div>
 
-                </form>
-            </main>
+                {/* Submit Actions */}
+                <div className="flex justify-end gap-4 pt-4 pb-20">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className={`px-8 py-3 rounded-xl bg-brand-purple text-white font-bold shadow-lg shadow-brand-purple/20 hover:bg-opacity-90 transition-all flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        <Save size={18} />
+                        {loading ? 'Saving...' : 'Save Employee'}
+                    </button>
+                </div>
+            </form>
         </div>
     );
 }
 
-// Helper Components
-const InputField = ({ label, name, type = 'text', value, onChange, placeholder, step, required }: any) => (
+// Helpers
+const InputField = ({ label, name, type = 'text', value, onChange, placeholder, step, required }: { label: string, name?: string, type?: string, value: string | number, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, placeholder?: string, step?: string, required?: boolean }) => (
     <div className="flex flex-col gap-2">
         <label className="text-xs text-gray-500 uppercase tracking-wider">{label} {required && <span className="text-red-500">*</span>}</label>
         <input
@@ -266,31 +497,31 @@ const InputField = ({ label, name, type = 'text', value, onChange, placeholder, 
             placeholder={placeholder}
             step={step}
             required={required}
-            className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors placeholder-gray-700"
+            className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors placeholder-gray-700"
         />
     </div>
 );
 
-const TextAreaField = ({ label, name, value, onChange }: any) => (
+const TextAreaField = ({ label, name, value, onChange }: { label: string, name: string, value: string, onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void }) => (
     <div className="flex flex-col gap-2">
         <label className="text-xs text-gray-500 uppercase tracking-wider">{label}</label>
         <textarea
             name={name}
             value={value}
             onChange={onChange}
-            className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors h-24 resize-none"
+            className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors h-24 resize-none"
         />
     </div>
 );
 
-const SelectField = ({ label, name, value, onChange, options }: any) => (
+const SelectField = ({ label, name, value, onChange, options }: { label: string, name: string, value: string, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void, options: string[] }) => (
     <div className="flex flex-col gap-2">
         <label className="text-xs text-gray-500 uppercase tracking-wider">{label}</label>
         <select
             name={name}
             value={value}
             onChange={onChange}
-            className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+            className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
         >
             {options.map((opt: string) => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -299,7 +530,7 @@ const SelectField = ({ label, name, value, onChange, options }: any) => (
     </div>
 );
 
-const FileUpload = ({ label, onChange, file }: any) => (
+const FileUpload = ({ label, onChange, file }: { label: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, file: File | null }) => (
     <div className="flex flex-col gap-2">
         <label className="text-xs text-gray-500 uppercase tracking-wider">{label}</label>
         <div className="relative group">

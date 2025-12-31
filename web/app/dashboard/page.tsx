@@ -12,6 +12,7 @@ import Waves from '../../components/Background/Waves';
 import { useIdleTimer } from '../../hooks/useIdleTimer';
 import { useAuth } from '../../context/AuthContext';
 import { getMenuItems } from '../../utils/menu';
+import EmployeeDashboard from '../../components/Dashboard/EmployeeDashboard';
 
 export default function DashboardPage() {
     const { user, isLoading: authLoading } = useAuth();
@@ -27,7 +28,7 @@ export default function DashboardPage() {
             return;
         }
 
-        if (user) {
+        if (user && user.role !== 'Employee') {
             fetchStats();
         }
     }, [user, authLoading, router]);
@@ -48,6 +49,35 @@ export default function DashboardPage() {
 
     const menuItems = getMenuItems(user.role);
 
+    // --- EMPLOYEE VIEW ---
+    if (user.role === 'Employee') {
+        return (
+            <div className="min-h-screen bg-brand-black text-white relative">
+                <Waves lineColor="#230a46ff" backgroundColor="rgba(0,0,0,0.2)" className="fixed inset-0 pointer-events-none z-0" />
+                <StaggeredMenu
+                    position="right"
+                    isFixed={true}
+                    items={menuItems}
+                    displayItemNumbering={true}
+                    menuButtonColor="#fff"
+                    openMenuButtonColor="#fff"
+                    changeMenuColorOnOpen={true}
+                    colors={['#B19EEF', '#5227FF']}
+                    logoUrl="/logo.png"
+                    accentColor="var(--color-brand-purple)"
+                    menuBackgroundColor="#000000ff"
+                    itemTextColor="#ffffff"
+                    smartHeader={true}
+                    headerColor="#000000ff"
+                />
+                <main className="mx-auto max-w-7xl p-6 pt-32 relative z-10">
+                    <EmployeeDashboard user={user} />
+                </main>
+            </div>
+        );
+    }
+
+    // --- ADMIN / HR VIEW ---
     const COLORS = ['#00C49F', '#FFBB28', '#FF8042', '#0088FE', '#8884d8', '#82ca9d'];
     const STATUS_COLORS = { 'Active': '#00C49F', 'Exited': '#FF8042' };
 
