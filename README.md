@@ -1,106 +1,159 @@
-# EwandzDigital HRMS (Modern Stack)
+# EwandzDigital HRMS - Setup & Deployment Guide
 
-A comprehensive, modern Employee Database Management System built with **Next.js** (Frontend) and **FastAPI** (Backend). This application simplifies HR operations by providing a centralized platform for managing employee records, tracking assets, monitoring performance, and visualizing workforce analytics.
+This document contains detailed, step-by-step instructions to set up, run, and use the EwandzDigital HR Management System. It is designed for users of all technical levels to easily get the application running.
 
-## 🚀 Key Features
+## 🌟 Overview
+The system consists of two main parts that must run simultaneously:
+1.  **Backend (API)**: Handles the database and logic (powered by Python/FastAPI).
+2.  **Frontend (Web Interface)**: The visible website you interact with (powered by Next.js).
 
-*   **📊 Interactive Dashboard**: Real-time analytics on headcount, department distribution, attrition, and tenure.
-*   **👥 Employee Management**:
-    *   **Add Employee**: Comprehensive form to onboard new hires across 5 data dimensions.
-    *   **Edit Profile**: Full editing capabilities with tabbed navigation.
-    *   **Listing**: Searchable and filterable table of all employees.
-*   **📄 CV Management**:
-    *   Upload CVs (PDF/Docx) during onboarding or editing.
-    *   **In-App PDF Viewer**: View CVs directly within the application.
-*   **🔐 Role-Based Access Control (RBAC)**:
-    *   **Admin**: Full access + User Management.
-    *   **HR**: Full access to employee data (Add/Edit/View).
-    *   **Management**: Read-only access to Dashboards and Employee Lists.
-    *   **Employee**: Personal profile view.
-*   **🛠️ Asset & Performance Tracking**: Dedicated sections for tracking company assets and performance reviews.
+---
 
-## 🛠️ Tech Stack
+## 📋 Prerequisites
+Before you start, please ensure you have the following installed.
 
-*   **Frontend**: Next.js 16, React 19, TailwindCSS 4, Framer Motion
-*   **Backend**: FastAPI, Uvicorn
-*   **Database**: SQLite
-*   **Authentication**: Session-based with Cookies
+### 1. Python (for Backend)
+*   **Download**: [python.org/downloads](https://www.python.org/downloads/)
+*   **Version**: 3.8 or higher.
+*   *Note during installation*: Ensure you check the box **"Add Python to PATH"**.
 
-## 📂 Project Structure
+### 2. Node.js (for Frontend)
+*   **Download**: [nodejs.org/en/download](https://nodejs.org/en/download/)
+*   **Version**: v18.17.0 or higher (LTS recommended).
+*   *Verification*: Open your terminal/command prompt and type `node -v`. It should show a version number.
 
-```text
-ewandzdigital/
-├── backend/                # FastAPI Backend
-│   ├── database/           # DB scripts & connection
-│   ├── routers/            # API endpoints (auth, employees, etc.)
-│   ├── main.py             # Entry point
-│   └── auth.py             # Authentication logic
-├── web/                    # Next.js Frontend
-│   ├── app/                # Pages and Layouts
-│   ├── components/         # Reusable UI components
-│   └── public/             # Static assets
-├── data/                   # Database & Uploaded files
-│   └── employee.db         # SQLite Database
-└── requirements.txt        # Backend dependencies
-```
+---
 
-## ⚡ Getting Started
+## ⚙️ Installation Guide
 
-### 1. Prerequisites
-- **Node.js** (v18+ recommended)
-- **Python** (v3.8+)
+**Important**: You will need to use a **Terminal** (Mac/Linux) or **Command Prompt/PowerShell** (Windows).
 
-### 2. Installation
+### Step 1: Download the Project
+1.  Open your Terminal or Command Prompt.
+2.  Run the following command to clone the repository:
+    ```bash
+    git clone https://github.com/cluxssy/employee_database_v1.git
+    ```
+3.  Navigate into the project folder:
+    ```bash
+    cd employee_database_v1
+    ```
+    *(Note: If the folder name is different after cloning, just type `cd` and the first few letters of the folder, then press **Tab** to autocomplete).*
 
-#### Backend Setup
-1.  Navigate to the root directory.
-2.  Install Python dependencies:
+### Step 2: Backend Setup (Database & API)
+This step checks the database and installs necessary Python libraries.
+
+1.  **Create a Virtual Environment** (Recommended to investigate issues):
+    *   **Mac/Linux**:
+        ```bash
+        python3 -m venv venv
+        source venv/bin/activate
+        ```
+    *   **Windows**:
+        ```bash
+        python -m venv venv
+        .\venv\Scripts\activate
+        ```
+    *(You should see `(venv)` appear at the start of your command line)*.
+
+2.  **Install Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
-3.  Initialize the database:
+
+3.  **Initialize the Database**:
+    This creates the `employee.db` file where all data will be stored.
     ```bash
     python backend/database/init_db.py
     ```
+    *You should see a message: "Tables created successfully!"*
 
-#### Frontend Setup
-1.  Navigate to the `web` directory:
+4.  **Create an Admin Account**:
+    Since this is a fresh database, you need to create your first login user.
+    ```bash
+    python backend/database/create_admin.py
+    ```
+    *   Enter a **Username** (e.g., `admin`)
+    *   Enter a **Password** (e.g., `admin123`)
+    *   *Remember these credentials! You will need them to log in.*
+
+---
+
+### Step 3: Frontend Setup (Web Interface)
+
+1.  Open a **NEW** Terminal window (keep the first one open).
+2.  Navigate to the `web` folder inside the project:
     ```bash
     cd web
     ```
-2.  Install Node dependencies:
+    *(If you are in the root folder, type `cd web`. If you are opening a fresh terminal, navigate to the project folder first, then `cd web`)*.
+
+3.  **Install Node Modules**:
     ```bash
     npm install
     ```
+    *This may take a minute as it downloads the interface libraries.*
 
-### 3. Running the Application
+---
 
-You need to run both the backend and frontend servers.
+## 🚀 Running the Application
 
-#### Start Backend (Terminal 1)
-From the root `ewandzdigital` directory:
+To use the app, **BOTH** the Backend and Frontend must be running.
+
+### 1. Start the Backend
+In your **first** terminal (the one in the root folder):
 ```bash
 uvicorn backend.main:app --reload
 ```
-*The API will be available at `http://localhost:8000`*
+*   You will see specific logs saying `Application startup complete`.
+*   The Backend is now running at `http://localhost:8000`.
 
-#### Start Frontend (Terminal 2)
-From the `web` directory:
+### 2. Start the Frontend
+In your **second** terminal (the one in the `web` folder):
 ```bash
 npm run dev
 ```
-*The Application will be available at `http://localhost:3000`*
+*   You will see a message saying `Ready in ...`.
+*   The Frontend is now running at `http://localhost:3000`.
 
-## 🔐 Login Credentials
+---
 
-Since the database is local, you will need to create an initial Admin user to log in.
+## 🖥️ How to Use
 
-Run the helper script to create credentials:
-```bash
-python backend/database/create_admin.py
-```
-Follow the prompts to set a username and password. You can then use these credentials to log in.
+1.  Open your web browser (Chrome, Edge, Safari).
+2.  Go to: **[http://localhost:3000](http://localhost:3000)**
+3.  You will see the Login Screen.
+4.  Enter the **Username** and **Password** you created in Step 2.4.
+5.  Click **Login**.
 
-Once the backend is running, you can access the interactive API docs at:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+### Navigate the App:
+*   **Dashboard**: View overview stats.
+*   **Employees**: Click "Add Employee" to onboard someone or use the Search bar to find existing records.
+*   **Admin**: Go to the Admin panel to create more users (HR, Managers) if needed.
+
+---
+
+## ❓ Troubleshooting
+
+**Q: "Command not found" error?**
+*   Ensure Python and Node.js are installed and added to your system PATH.
+*   Try closing and reopening the terminal.
+
+**Q: Backend says "Module not found"?**
+*   Ensure you activated the virtual environment (`source venv/bin/activate` or `venv\Scripts\activate`) before running `uvicorn`.
+
+**Q: Frontend says "EADDRINUSE"?**
+*   Something is already running on port 3000. Try stopping other tasks or restarting your computer.
+
+**Q: I can't log in?**
+*   Ensure you ran the `create_admin.py` script.
+*   Ensure the Backend terminal is still running (don't close it!).
+*   Check the backend terminal for any error messages when you click Login.
+
+---
+
+## 📂 Project Structure for Developers
+
+*   **`backend/`**: Python FastAPI application (Logic & API).
+*   **`web/`**: Next.js React application (UI & Pages).
+*   **`data/`**: Stores the SQLite database file (`employee.db`) and uploaded CVs.
