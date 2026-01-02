@@ -1,86 +1,106 @@
-# EwandzDigital HRMS
+# EwandzDigital HRMS (Modern Stack)
 
-A comprehensive Employee Database Management System built with **Streamlit** and **SQLite**. This application simplifies HR operations by providing a centralized platform for managing employee records, tracking assets, monitoring performance, and visualizing workforce analytics.
+A comprehensive, modern Employee Database Management System built with **Next.js** (Frontend) and **FastAPI** (Backend). This application simplifies HR operations by providing a centralized platform for managing employee records, tracking assets, monitoring performance, and visualizing workforce analytics.
 
 ## 🚀 Key Features
 
 *   **📊 Interactive Dashboard**: Real-time analytics on headcount, department distribution, attrition, and tenure.
 *   **👥 Employee Management**:
-    *   **Add Employee**: Comprehensive form to onboard new hires across 5 data dimensions (Personal, Work, Skills, Assets, Performance/HR).
+    *   **Add Employee**: Comprehensive form to onboard new hires across 5 data dimensions.
     *   **Edit Profile**: Full editing capabilities with tabbed navigation.
     *   **Listing**: Searchable and filterable table of all employees.
 *   **📄 CV Management**:
     *   Upload CVs (PDF/Docx) during onboarding or editing.
-    *   **In-App PDF Viewer**: View CVs directly within the application without downloading.
-    *   Version control logic ensures CVs are preserved during profile updates.
+    *   **In-App PDF Viewer**: View CVs directly within the application.
 *   **🔐 Role-Based Access Control (RBAC)**:
-    *   **Admin**: Full access + User Management (Create/Delete users, Reset passwords).
+    *   **Admin**: Full access + User Management.
     *   **HR**: Full access to employee data (Add/Edit/View).
     *   **Management**: Read-only access to Dashboards and Employee Lists.
+    *   **Employee**: Personal profile view.
 *   **🛠️ Asset & Performance Tracking**: Dedicated sections for tracking company assets and performance reviews.
 
 ## 🛠️ Tech Stack
 
-*   **Frontend**: Streamlit
-*   **Backend**: Python, SQLite (Embedded DB)
-*   **Data Processing**: Pandas
-*   **Authentication**: Custom Role-Based Auth (Hashed passwords)
+*   **Frontend**: Next.js 16, React 19, TailwindCSS 4, Framer Motion
+*   **Backend**: FastAPI, Uvicorn
+*   **Database**: SQLite
+*   **Authentication**: Session-based with Cookies
 
 ## 📂 Project Structure
 
 ```text
 ewandzdigital/
-├── backend/
-│   ├── auth.py             # Authentication & User Management logic
-│   └── database/           # DB initialization scripts
-├── frontend/
-│   ├── app.py              # Main application entry point
-│   ├── assets/             # Images and icons
-│   └── views/              # UI Modules
-│       ├── dashboard.py    # Analytics Dashboard
-│       ├── add_employee.py # Onboarding Form
-│       ├── employee_list.py# Search & List View
-│       ├── profile_view.py # Detailed Profile & CV Viewer
-│       ├── edit_employee.py# Edit Form Logic
-│       └── manage_users.py # Admin User Management
-├── data/
-│   ├── employee.db         # SQLite Database
-│   └── uploaded_cvs/       # Stored CV files
-├── docs/                   # Documentation
-└── requirements.txt        # Dependencies
+├── backend/                # FastAPI Backend
+│   ├── database/           # DB scripts & connection
+│   ├── routers/            # API endpoints (auth, employees, etc.)
+│   ├── main.py             # Entry point
+│   └── auth.py             # Authentication logic
+├── web/                    # Next.js Frontend
+│   ├── app/                # Pages and Layouts
+│   ├── components/         # Reusable UI components
+│   └── public/             # Static assets
+├── data/                   # Database & Uploaded files
+│   └── employee.db         # SQLite Database
+└── requirements.txt        # Backend dependencies
 ```
 
 ## ⚡ Getting Started
 
 ### 1. Prerequisites
-Ensure you have Python 3.8+ installed.
+- **Node.js** (v18+ recommended)
+- **Python** (v3.8+)
 
 ### 2. Installation
-Clone the repository and install dependencies:
 
+#### Backend Setup
+1.  Navigate to the root directory.
+2.  Install Python dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  Initialize the database:
+    ```bash
+    python backend/database/init_db.py
+    ```
+
+#### Frontend Setup
+1.  Navigate to the `web` directory:
+    ```bash
+    cd web
+    ```
+2.  Install Node dependencies:
+    ```bash
+    npm install
+    ```
+
+### 3. Running the Application
+
+You need to run both the backend and frontend servers.
+
+#### Start Backend (Terminal 1)
+From the root `ewandzdigital` directory:
 ```bash
-git clone <repository-url>
-cd ewandzdigital
-pip install -r requirements.txt
+uvicorn backend.main:app --reload
 ```
+*The API will be available at `http://localhost:8000`*
 
-### 3. Database Setup
-Initialize the database with the schema and default admin user:
-
+#### Start Frontend (Terminal 2)
+From the `web` directory:
 ```bash
-python backend/database/init_db.py
+npm run dev
 ```
-*(Default Admin: `admin` / `admin123`)*
+*The Application will be available at `http://localhost:3000`*
 
-### 4. Run the Application
-Launch the Streamlit app:
+## 🔐 Login Credentials
 
+Since the database is local, you will need to create an initial Admin user to log in.
+
+Run the helper script to create credentials:
 ```bash
-streamlit run frontend/app.py
+python backend/database/create_admin.py
 ```
+Follow the prompts to set a username and password. You can then use these credentials to log in.
 
-## 📚 Documentation
-
-*   [**User Manual**](docs/user_manual.md): Guide for HR and Admins on using the system.
-*   [**Developer Guide**](docs/developer_guide.md): Technical details, database schema, and code walkthrough.
-*   [**Database Guide**](docs/database_guide.md): Detailed schema and table relationships.
+Once the backend is running, you can access the interactive API docs at:
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
