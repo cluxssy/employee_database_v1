@@ -350,7 +350,6 @@ def create_tables():
             assessment_id INTEGER,
             category TEXT,
             subcategory TEXT,
-            subcategory TEXT,
             self_score INTEGER DEFAULT 0,
             manager_score INTEGER DEFAULT 0,
             score INTEGER DEFAULT 0, -- Final score used for calcs
