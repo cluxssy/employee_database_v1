@@ -29,11 +29,17 @@ export default function EmployeeDirectory() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     useEffect(() => {
-        if (!authLoading && !user) {
-            router.push('/');
-            return;
+        if (!authLoading) {
+            if (!user) {
+                // Not logged in
+                router.push('/');
+            } else if (!['Admin', 'HR', 'Management'].includes(user.role)) {
+                // Unauthorized
+                router.push('/dashboard');
+            } else {
+                fetchEmployees();
+            }
         }
-        if (user) fetchEmployees();
     }, [user, authLoading, router]);
 
     const fetchEmployees = async () => {

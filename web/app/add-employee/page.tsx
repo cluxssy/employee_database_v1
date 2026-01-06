@@ -32,7 +32,7 @@ export default function AddEmployee() {
         }
     }, [authLoading, isAuthorized, user, router]);
 
-    const [activeTab, setActiveTab] = useState<'invite' | 'status' | 'manual'>('invite');
+    const [activeTab, setActiveTab] = useState<'invite' | 'status' | 'approvals' | 'manual'>('invite');
     const menuItems = getMenuItems(user?.role);
 
     if (!isAuthorized) return null;
@@ -89,6 +89,12 @@ export default function AddEmployee() {
                         label="Invitation Status"
                     />
                     <TabButton
+                        active={activeTab === 'approvals'}
+                        onClick={() => setActiveTab('approvals')}
+                        icon={<CheckCircle size={18} />}
+                        label="Pending Approvals"
+                    />
+                    <TabButton
                         active={activeTab === 'manual'}
                         onClick={() => setActiveTab('manual')}
                         icon={<UserPlus size={18} />}
@@ -100,6 +106,7 @@ export default function AddEmployee() {
                 <div className="min-h-[500px]">
                     {activeTab === 'invite' && <InviteForm />}
                     {activeTab === 'status' && <InviteStatusList />}
+                    {activeTab === 'approvals' && <PendingApprovalsList />}
                     {activeTab === 'manual' && <ManualEntryForm router={router} />}
                 </div>
 
@@ -302,6 +309,227 @@ function InviteStatusList() {
                     </table>
                 </div>
             )}
+        </div>
+    );
+}
+
+// --- 3. Pending Approvals List ---
+function PendingApprovalsList() {
+    const [approvals, setApprovals] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedEmp, setSelectedEmp] = useState<any>(null);
+
+    const fetchApprovals = async () => {
+        try {
+            const res = await fetch('http://localhost:8000/api/onboarding/approvals', { credentials: 'include' });
+            if (res.ok) setApprovals(await res.json());
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    useEffect(() => { fetchApprovals(); }, []);
+
+    const handleApprovalSuccess = (code: string) => {
+        setApprovals(prev => prev.filter(a => a.employee_code !== code));
+        setSelectedEmp(null);
+    };
+
+    if (loading) return <div className="text-gray-500 text-center py-10">Loading pending approvals...</div>;
+
+    return (
+        <>
+            <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl overflow-hidden p-6 relative">
+                <div className="flex items-center gap-3 mb-6 border-b border-[#222] pb-4">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <CheckCircle className="text-green-500" /> Pending Approvals
+                    </h2>
+                </div>
+
+                {approvals.length === 0 ? (
+                    <div className="text-center py-10 text-gray-500">No employees waiting for approval.</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="text-xs text-gray-500 uppercase border-b border-[#333]">
+                                    <th className="p-4">Employee</th>
+                                    <th className="p-4">Role / Team</th>
+                                    <th className="p-4">Submission Date</th>
+                                    <th className="p-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {approvals.map(emp => (
+                                    <tr key={emp.employee_code} className="border-b border-[#222]/50 hover:bg-[#1a1a1a]">
+                                        <td className="p-4">
+                                            <div className="font-bold text-white">{emp.name}</div>
+                                            <div className="text-xs text-brand-purple font-mono">{emp.employee_code}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="text-sm text-gray-300">{emp.designation}</div>
+                                            <div className="text-xs text-gray-500">{emp.team}</div>
+                                        </td>
+                                        <td className="p-4 text-sm text-gray-500">
+                                            {emp.doj}
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <button
+                                                onClick={() => setSelectedEmp(emp)}
+                                                className="bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-800 px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ml-auto"
+                                            >
+                                                Review & Approve
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                )}
+            </div >
+
+            {/* Approval Modal - Moved outside to prevent overflow clipping caused by backdrop-blur parent */}
+            {
+                selectedEmp && (
+                    <ApprovalModal
+                        employee={selectedEmp}
+                        onClose={() => setSelectedEmp(null)}
+                        onSuccess={() => handleApprovalSuccess(selectedEmp.employee_code)}
+                    />
+                )
+            }
+        </>
+    );
+}
+
+function ApprovalModal({ employee, onClose, onSuccess }: any) {
+    const [form, setForm] = useState({
+        reporting_manager: '',
+        employment_type: 'Full Time',
+        pf_included: 'No',
+        mediclaim_included: 'No',
+        notes: ''
+    });
+    const [managers, setManagers] = useState<any[]>([]);
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        const fetchManagers = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/employees', { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    // Filter for Management/Admin roles
+                    const validManagers = data.filter((emp: any) => emp.role === 'Management' || emp.role === 'Admin');
+                    setManagers(validManagers);
+                }
+            } catch (error) {
+                console.error("Failed to fetch managers", error);
+            }
+        };
+        fetchManagers();
+    }, []);
+
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            const formData = new FormData();
+            formData.append('reporting_manager', form.reporting_manager);
+            formData.append('employment_type', form.employment_type);
+            formData.append('pf_included', form.pf_included);
+            formData.append('mediclaim_included', form.mediclaim_included);
+            formData.append('notes', form.notes);
+
+            const res = await fetch(`http://localhost:8000/api/onboarding/approve/${employee.employee_code}`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+
+            if (res.ok) {
+                onSuccess();
+            } else {
+                alert("Failed to approve employee");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error submitting approval");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-[#111] border border-[#333] rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-fade-in-up">
+                <div className="flex justify-between items-center p-6 border-b border-[#222]">
+                    <div>
+                        <h3 className="text-2xl font-bold text-white">Approve {employee.name}</h3>
+                        <p className="text-sm text-gray-500">Review details and add employment information to activate.</p>
+                    </div>
+                    <button onClick={onClose} className="text-gray-500 hover:text-white p-2 hover:bg-[#222] rounded-full transition-colors"><XCircle size={28} /></button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    {/* Read Only Info */}
+                    <div className="grid grid-cols-2 gap-4 bg-[#1a1a1a] p-4 rounded-xl border border-[#333]">
+                        <div><span className="text-xs text-gray-500 block">Department</span><span className="text-white">{employee.team}</span></div>
+                        <div><span className="text-xs text-gray-500 block">Designation</span><span className="text-white">{employee.designation}</span></div>
+                        <div><span className="text-xs text-gray-500 block">Email</span><span className="text-white">{employee.email_id}</span></div>
+                        <div><span className="text-xs text-gray-500 block">Joined</span><span className="text-white">{employee.doj}</span></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs text-gray-500 uppercase tracking-wider">Reporting Manager</label>
+                            <select
+                                value={form.reporting_manager}
+                                onChange={(e) => setForm({ ...form, reporting_manager: e.target.value })}
+                                className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+                                required
+                            >
+                                <option value="">Select Manager</option>
+                                {managers.map(m => (
+                                    <option key={m.employee_code} value={m.name}>{m.name} ({m.employee_code})</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs text-gray-500 uppercase tracking-wider">Employment Type</label>
+                            <select
+                                value={form.employment_type}
+                                onChange={(e) => setForm({ ...form, employment_type: e.target.value })}
+                                className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+                            >
+                                <option>Full Time</option>
+                                <option>Part Time</option>
+                                <option>Contractual</option>
+                                <option>Internship</option>
+                            </select>
+                        </div>
+
+                        <SelectField label="PF Included?" name="pf" value={form.pf_included} onChange={(e: any) => setForm({ ...form, pf_included: e.target.value })} options={['Yes', 'No']} />
+                        <SelectField label="Mediclaim Included?" name="mediclaim" value={form.mediclaim_included} onChange={(e: any) => setForm({ ...form, mediclaim_included: e.target.value })} options={['Yes', 'No']} />
+                    </div>
+
+                    <TextAreaField label="HR Notes / Comments" name="notes" value={form.notes} onChange={(e: any) => setForm({ ...form, notes: e.target.value })} />
+
+                    <div className="pt-4 flex gap-4 justify-end border-t border-[#222]">
+                        <button type="button" onClick={onClose} className="px-6 py-2 rounded-lg hover:bg-[#222] text-gray-400">Cancel</button>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="bg-brand-purple hover:bg-brand-purple/80 text-white font-bold px-8 py-3 rounded-lg shadow-lg shadow-brand-purple/20 flex items-center gap-2"
+                        >
+                            {submitting ? 'Activating...' : <><CheckCircle size={18} /> Approve & Activate</>}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

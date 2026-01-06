@@ -9,10 +9,11 @@ export interface MenuItem {
 
 const ALL_MENU_ITEMS = [
     { label: 'Home', ariaLabel: 'Dashboard', link: '/dashboard' },
-    { label: 'Directory', ariaLabel: 'Employee Directory', link: '/employee-directory' },
+    { label: 'Directory', ariaLabel: 'Employee Directory', link: '/employee-directory', roles: ['Admin', 'HR', 'Management'] },
+    { label: 'Attendance', ariaLabel: 'Attendance & Leaves', link: '/attendance' },
     { label: 'Add Employee', ariaLabel: 'Add New Employee', link: '/add-employee', roles: ['Admin', 'HR'] },
     { label: 'Assets', ariaLabel: 'Manage Assets', link: '/manage-assets', roles: ['Admin', 'HR'] },
-    { label: 'Performance', ariaLabel: 'Performance Management', link: '/performance', roles: ['Admin', 'HR'] },
+    { label: 'Performance', ariaLabel: 'Performance Management', link: '/performance', roles: ['Admin', 'HR', 'Management', 'Employee'] },
     { label: 'Training', ariaLabel: 'Training Management', link: '/training', roles: ['Admin', 'HR'] },
     { label: 'Admin Panel', ariaLabel: 'System Administration', link: '/admin', roles: ['Admin'] },
     { label: 'About Us', ariaLabel: 'About & Guide', link: '/about' },

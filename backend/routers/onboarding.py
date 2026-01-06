@@ -138,105 +138,130 @@ def complete_onboarding(
     token: str = Form(...),
     password: str = Form(...),
     contact_number: str = Form(...),
+    emergency_contact: str = Form(...),  # Added
     dob: str = Form(...),
     current_address: str = Form(...),
     permanent_address: str = Form(...),
     education_details: Optional[str] = Form(None),
+    primary_skills: Optional[str] = Form(None),   # Added
+    secondary_skills: Optional[str] = Form(None), # Added
     photo_file: Optional[UploadFile] = File(None),
     cv_file: Optional[UploadFile] = File(None),
     id_proof_file: Optional[UploadFile] = File(None)
 ):
-    # Construct data object to match previous logic (reusing OnboardingCompletion model for consistency if needed, or just using a dict/object wrapper)
-    # We can just use a SimpleNamespace or a quick dict to keep the rest of the logic similar, 
-    # OR better yet, instantiate the model to validate the fields if we want, but simple access is fine.
-    
-    # Construct data object using the Pydantic model for validation
-    data = OnboardingCompletion(
-        token=token,
-        password=password,
-        contact_number=contact_number,
-        dob=dob,
-        current_address=current_address,
-        permanent_address=permanent_address,
-        education_details=education_details
-    )
-
     conn = get_db_connection()
     c = conn.cursor()
     
-    # 1. Verify Token again
-    invite = c.execute("SELECT * FROM onboarding_invites WHERE token = ? AND status = 'Pending'", (data.token,)).fetchone()
+    # 1. Verify Token
+    invite = c.execute("SELECT * FROM onboarding_invites WHERE token = ? AND status = 'Pending'", (token,)).fetchone()
     if not invite:
         conn.close()
         raise HTTPException(status_code=400, detail="Invalid token")
 
     try:
         # 2. Generate Employee Code (Simple Logic: EMP + ID)
-        # We need to get the next ID first
-        count = c.execute("SELECT COUNT(*) FROM employees").fetchone()[0]
-        emp_code = f"EMP{str(count + 1).zfill(4)}"
+        while True:
+            count = c.execute("SELECT COUNT(*) FROM employees").fetchone()[0]
+            # Add a small random component or just check existence to be safe against race conditions/deletions
+            # Since IDs are not reliable if rows are deleted, let's try to find a gap or just increment until unique
+            # Better approach: Get max numeric part
+            
+            # Simple retry logic:
+            emp_code = f"EMP{str(count + 1).zfill(4)}"
+            
+            # Check if exists (handling deleted rows case where count < max_id)
+            if not c.execute("SELECT 1 FROM employees WHERE employee_code = ?", (emp_code,)).fetchone():
+                break
+            
+            # If collision, we need a better strategy. 
+            # In a real app, use a sequence or UUID. 
+            # Here, let's just increment count locally until we find a free slot
+            # Or simpler: find max code
+            max_code_row = c.execute("SELECT employee_code FROM employees ORDER BY employee_code DESC LIMIT 1").fetchone()
+            if max_code_row:
+                last_code = max_code_row[0]
+                try:
+                    num_part = int(last_code.replace("EMP", ""))
+                    emp_code = f"EMP{str(num_part + 1).zfill(4)}"
+                    break
+                except:
+                    pass # Fallback to count+1 logic and hope
+            
+            # Fallback if logic fails (e.g. empty table or weird codes)
+            if not c.execute("SELECT 1 FROM employees WHERE employee_code = ?", (emp_code,)).fetchone():
+                break
+            
+            # If we still conflict (highly unlikely unless concurrent), force a random suffix or increment in a loop
+            import random
+            emp_code = f"EMP{str(count + 1 + random.randint(1, 1000)).zfill(4)}"
+            break
 
-        # 3. Create User Account
-        # Username = Email
-        password_hash = get_password_hash(data.password)
-        # Added employee_code to user record
-        c.execute("INSERT INTO users (username, password_hash, role, employee_code, is_active) VALUES (?, ?, ?, ?, 1)", 
+        # 3. Create User Account (Inactive initially)
+        password_hash = get_password_hash(password)
+        c.execute("INSERT INTO users (username, password_hash, role, employee_code, is_active) VALUES (?, ?, ?, ?, 0)", 
                   (invite['email'], password_hash, invite['role'], emp_code))
         
-        # 4. Create Employee Record
-        
-        # File Saving Logic
-        # Store in data/uploads so it is served via /static mount
+        # 4. File Saving Logic
         UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 
         def save_file_to_disk(uploaded_file, code):
             if not uploaded_file: return None
-            # store in data/uploads/EMPXXXX/filename
-            # We want to return the relative path from DATA_DIR, e.g. "uploads/EMPXXXX/filename"
-            
             user_subdir = os.path.join("uploads", code)
             full_user_dir = os.path.join(DATA_DIR, user_subdir)
             os.makedirs(full_user_dir, exist_ok=True)
-            
             file_path = os.path.join(full_user_dir, uploaded_file.filename)
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(uploaded_file.file, buffer)
-                
-            # Return relative path for DB
             return os.path.join(user_subdir, uploaded_file.filename)
 
         photo_path = save_file_to_disk(photo_file, emp_code)
         cv_path = save_file_to_disk(cv_file, emp_code)
         id_proof_path = save_file_to_disk(id_proof_file, emp_code)
 
+        # 5. Create Employee Record (Pending Approval)
         c.execute('''
             INSERT INTO employees (
-                employee_code, name, email_id, contact_number, dob, 
+                employee_code, name, email_id, contact_number, emergency_contact, dob, 
                 current_address, permanent_address, education_details,
                 team, designation, employment_status, doj,
                 photo_path, cv_path, id_proofs
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             emp_code, 
             invite['name'], 
             invite['email'], 
-            data.contact_number, 
-            data.dob,
-            data.current_address, 
-            data.permanent_address,
-            data.education_details,
+            contact_number,
+            emergency_contact,  # Added
+            dob,
+            current_address, 
+            permanent_address,
+            education_details,
             invite['department'], 
             invite['designation'], 
-            'Active', 
+            'Pending Approval', 
             datetime.now().strftime('%Y-%m-%d'),
             photo_path,
             cv_path,
             id_proof_path
         ))
         
-        # 4. Mark Invite as Completed
-        c.execute("UPDATE onboarding_invites SET status = 'Completed' WHERE token = ?", (data.token,))
+        # 6. Insert Skills
+        c.execute('''
+            INSERT INTO skill_matrix (
+                employee_code, candidate_name, primary_skillset,
+                secondary_skillset, cv_upload
+            ) VALUES (?, ?, ?, ?, ?)
+        ''', (
+            emp_code,
+            invite['name'],
+            primary_skills,
+            secondary_skills,
+            cv_path
+        ))
+        
+        # 7. Mark Invite as Completed
+        c.execute("UPDATE onboarding_invites SET status = 'Completed' WHERE token = ?", (token,))
         
         conn.commit()
         return {"success": True, "message": "Onboarding completed successfully. Please login."}
@@ -244,6 +269,48 @@ def complete_onboarding(
     except sqlite3.IntegrityError as e:
         conn.close()
         raise HTTPException(status_code=400, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@router.get("/approvals", dependencies=[Depends(require_role(["Admin", "HR"]))])
+def get_pending_approvals():
+    conn = get_db_connection()
+    employees = conn.execute("SELECT * FROM employees WHERE employment_status = 'Pending Approval'").fetchall()
+    conn.close()
+    return [dict(e) for e in employees]
+
+@router.post("/approve/{employee_code}", dependencies=[Depends(require_role(["Admin", "HR"]))])
+def approve_onboarding(
+    employee_code: str,
+    reporting_manager: str = Form(None),
+    employment_type: str = Form("Full Time"),
+    pf_included: str = Form("No"),
+    mediclaim_included: str = Form("No"),
+    notes: str = Form(None)
+):
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        # Update Employee with HR-provided details and Activate
+        c.execute('''
+            UPDATE employees 
+            SET employment_status = 'Active',
+                reporting_manager = ?,
+                employment_type = ?,
+                pf_included = ?,
+                mediclaim_included = ?,
+                notes = ?
+            WHERE employee_code = ?
+        ''', (reporting_manager, employment_type, pf_included, mediclaim_included, notes, employee_code))
+        
+        # Activate User Logic
+        c.execute("UPDATE users SET is_active = 1 WHERE employee_code = ?", (employee_code,))
+        
+        conn.commit()
+        return {"success": True, "message": f"Employee {employee_code} approved successfully"}
     except Exception as e:
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))

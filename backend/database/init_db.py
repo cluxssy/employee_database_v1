@@ -29,7 +29,7 @@ def create_tables():
             contact_number TEXT,
             emergency_contact TEXT,
             email_id TEXT,
-            doj TEXT,
+            doj TEXT, 
             team TEXT,
             designation TEXT,
             employment_type TEXT,
@@ -179,7 +179,8 @@ def create_tables():
             self_rating REAL,
             manager_rating REAL,
             final_score REAL,
-            comments TEXT,
+            self_comment TEXT,
+            manager_comment TEXT,
             assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (kra_id) REFERENCES kra_library(id),
             FOREIGN KEY (employee_code) REFERENCES employees(employee_code)
@@ -270,13 +271,93 @@ def create_tables():
         )
     ''')
 
-    # 16) Sessions Table
+    # 16) Attendance Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT NOT NULL,
+            date TEXT NOT NULL,
+            clock_in TEXT,
+            clock_out TEXT,
+            work_log TEXT,
+            status TEXT DEFAULT 'Present',
+            ip_address TEXT,
+            FOREIGN KEY (employee_code) REFERENCES employees(employee_code),
+            UNIQUE(employee_code, date)
+        )
+    ''')
+
+    # 17) Leaves Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS leaves (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT NOT NULL,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            leave_type TEXT NOT NULL,
+            reason TEXT,
+            status TEXT DEFAULT 'Pending', -- Pending, Approved, Rejected
+            rejection_reason TEXT,
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (employee_code) REFERENCES employees(employee_code)
+        )
+    ''')
+    
+    # 18) Leave Balances Table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS leave_balances (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT NOT NULL UNIQUE,
+            year INTEGER NOT NULL,
+            sick_total INTEGER DEFAULT 10,
+            sick_used INTEGER DEFAULT 0,
+            casual_total INTEGER DEFAULT 12,
+            casual_used INTEGER DEFAULT 0,
+            privilege_total INTEGER DEFAULT 15,
+            privilege_used INTEGER DEFAULT 0,
+            FOREIGN KEY (employee_code) REFERENCES employees(employee_code)
+        )
+    ''')
+
+    # 19) Sessions Table
     c.execute('''
         CREATE TABLE IF NOT EXISTS sessions (
             session_token TEXT PRIMARY KEY,
             user_id INTEGER,
             expires_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 20) Quarterly Assessments (Excel-like)
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS quarterly_assessments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT,
+            year INTEGER,
+            quarter TEXT, -- Q1, Q2, Q3, Q4
+            status TEXT DEFAULT 'Draft', -- Draft, Submitted, Finalized
+            total_score INTEGER DEFAULT 0,
+            percentage REAL DEFAULT 0.0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(employee_code, year, quarter)
+        )
+    ''') 
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS assessment_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assessment_id INTEGER,
+            category TEXT,
+            subcategory TEXT,
+            subcategory TEXT,
+            self_score INTEGER DEFAULT 0,
+            manager_score INTEGER DEFAULT 0,
+            score INTEGER DEFAULT 0, -- Final score used for calcs
+
+            manager_comment TEXT,
+            employee_comment TEXT,
+            FOREIGN KEY(assessment_id) REFERENCES quarterly_assessments(id)
         )
     ''')
 

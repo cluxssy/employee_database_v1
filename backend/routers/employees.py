@@ -12,14 +12,18 @@ router = APIRouter(
     tags=["employees"]
 )
 
-@router.get("/employees", dependencies=[Depends(require_role(["Admin", "HR", "Management"]))])
+@router.get("/employees", dependencies=[Depends(require_role(["Admin", "HR", "Management", "Employee"]))])
 def get_employees():
     conn = get_db_connection()
     c = conn.cursor()
     try:
         # Fetch basic list including new columns if needed (SELECT * is safer during dev, but explicit is better)
         # Using explicit columns to match frontend interface
-        c.execute("SELECT employee_code, name, designation, team, email_id, photo_path, employment_status, exit_date FROM employees")
+        c.execute("""
+            SELECT e.employee_code, e.name, e.designation, e.team, e.reporting_manager, e.email_id, e.photo_path, e.employment_status, e.exit_date, u.role
+            FROM employees e
+            LEFT JOIN users u ON e.employee_code = u.employee_code
+        """)
         rows = c.fetchall()
         employees = [dict(row) for row in rows]
         return employees
@@ -28,7 +32,7 @@ def get_employees():
     finally:
         conn.close()
 
-@router.get("/employee/{employee_code}", dependencies=[Depends(require_role(["Admin", "HR", "Management"]))])
+@router.get("/employee/{employee_code}", dependencies=[Depends(require_role(["Admin", "HR", "Management", "Employee"]))])
 def get_employee(employee_code: str):
     conn = get_db_connection()
     c = conn.cursor()
@@ -72,7 +76,8 @@ def get_employee(employee_code: str):
                     ka.self_rating,
                     ka.manager_rating,
                     ka.final_score,
-                    ka.comments,
+                    ka.self_comment,
+                    ka.manager_comment,
                     ka.assigned_at,
                     kl.name as kra_name,
                     kl.goal_name,
@@ -237,12 +242,13 @@ async def create_employee(
     finally:
         conn.close()
 
-@router.put("/employee/{employee_code}", dependencies=[Depends(require_role(["Admin", "HR"]))])
+@router.put("/employee/{employee_code}", dependencies=[Depends(require_role(["Admin", "HR", "Employee"]))])
 def update_employee(employee_code: str, data: dict = Body(...)):
     conn = get_db_connection()
     c = conn.cursor()
     try:
-        # Build dynamic query to allow partial updates
+
+        # 1. Update Employees Table
         fields = []
         values = []
         
@@ -251,7 +257,9 @@ def update_employee(employee_code: str, data: dict = Body(...)):
             'checklist_bag', 'checklist_mediclaim', 'checklist_pf', 
             'checklist_email_access', 'checklist_groups', 'checklist_relieving_letter',
             'exit_date', 'exit_reason', 'clearance_status', 'employment_status',
-            'name', 'designation', 'team'
+            'name', 'designation', 'team',
+            'contact_number', 'emergency_contact', 'current_address', 
+            'permanent_address', 'dob', 'email_id', 'reporting_manager', 'location'
         ]
         
         for key, value in data.items():
@@ -259,18 +267,46 @@ def update_employee(employee_code: str, data: dict = Body(...)):
                 fields.append(f"{key} = ?")
                 values.append(value)
         
-        if not fields:
-             return {"success": False, "message": "No valid fields provided for update"}
-             
-        values.append(employee_code)
-        query = f"UPDATE employees SET {', '.join(fields)} WHERE employee_code = ?"
+        if fields:
+            values.append(employee_code)
+            query = f"UPDATE employees SET {', '.join(fields)} WHERE employee_code = ?"
+            c.execute(query, tuple(values))
+
+        # 2. Update Skill Matrix Table
+        # Check if skills are provided at top level or nested
+        p_skill = data.get('primary_skillset')
+        s_skill = data.get('secondary_skillset')
         
-        c.execute(query, tuple(values))
+        # Also support receiving them inside a 'skill_matrix' dict
+        if 'skill_matrix' in data and isinstance(data['skill_matrix'], dict):
+            p_skill = data['skill_matrix'].get('primary_skillset', p_skill)
+            s_skill = data['skill_matrix'].get('secondary_skillset', s_skill)
+
+        if p_skill is not None or s_skill is not None:
+            # Check if record exists
+            c.execute("SELECT id FROM skill_matrix WHERE employee_code = ?", (employee_code,))
+            if c.fetchone():
+                skill_updates = []
+                skill_values = []
+                if p_skill is not None:
+                    skill_updates.append("primary_skillset = ?")
+                    skill_values.append(p_skill)
+                if s_skill is not None:
+                    skill_updates.append("secondary_skillset = ?")
+                    skill_values.append(s_skill)
+                
+                skill_values.append(employee_code)
+                c.execute(f"UPDATE skill_matrix SET {', '.join(skill_updates)} WHERE employee_code = ?", tuple(skill_values))
+            else:
+                # Insert if missing
+                c.execute("INSERT INTO skill_matrix (employee_code, primary_skillset, secondary_skillset) VALUES (?, ?, ?)", 
+                          (employee_code, p_skill or '', s_skill or ''))
+
         conn.commit()
-        
         return {"success": True, "message": "Employee updated successfully"}
         
     except Exception as e:
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()

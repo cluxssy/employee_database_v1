@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 # Import Routers
-from backend.routers import auth, employees, assets, performance, hr_activity, dashboard, admin, onboarding
+from backend.routers import auth, employees, assets, performance, hr_activity, dashboard, admin, onboarding, attendance, assessments
 from backend.database import DATA_DIR, get_db_connection
 
 app = FastAPI(title="EwandzDigital HRMS API")
@@ -37,6 +37,8 @@ app.include_router(hr_activity.router)
 app.include_router(dashboard.router)
 app.include_router(admin.router)
 app.include_router(onboarding.router)
+app.include_router(attendance.router)
+app.include_router(assessments.router)
 
 # Ensure data dir
 os.makedirs(DATA_DIR, exist_ok=True)

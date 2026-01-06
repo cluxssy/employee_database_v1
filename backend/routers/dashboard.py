@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from backend.routers.auth import require_role
+from backend.routers.auth import require_role, get_current_user
 from backend.database import get_db_connection
 import pandas as pd
 import json
@@ -130,7 +130,77 @@ def get_dashboard_stats():
         }
 
     except Exception as e:
-        print(f"Dashboard Error: {e}")
+        print(f"Admin Dashboard Error: {e}")
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+
+@router.get("/employee-stats", dependencies=[Depends(require_role(["Employee", "Admin", "HR", "Management"]))])
+def get_employee_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    conn = get_db_connection()
+    try:
+        employee_code = current_user.get("employee_code")
+        if not employee_code:
+            return {"error": "No employee code found for user"}
+
+        # 1. Employee Details
+        employee = conn.execute("SELECT * FROM employees WHERE employee_code = ?", (employee_code,)).fetchone()
+        employee_data = dict(employee) if employee else {}
+
+        # 2. Performance (KRAs)
+        kras = conn.execute("""
+            SELECT count(*) as total, 
+                   sum(case when status = 'Completed' then 1 else 0 end) as completed
+            FROM kra_assignments 
+            WHERE employee_code = ?
+        """, (employee_code,)).fetchone()
+        
+        # 3. Training (HR Activity)
+        trainings = conn.execute("""
+            SELECT count(*) as total,
+                   sum(case when training_status = 'Completed' then 1 else 0 end) as completed
+            FROM hr_activity
+            WHERE employee_code = ?
+        """, (employee_code,)).fetchone()
+        # Fallback to hr_activity if training_assignments is unused, but schema has both. 
+        # init_db.py shows training_assignments table. Let's try that first.
+        
+        # 4. Assets
+        assets = conn.execute("SELECT count(*) as total FROM assets WHERE employee_code = ?", (employee_code,)).fetchone()
+        
+        # 5. Notifications
+        notifications = conn.execute("""
+            SELECT * FROM notifications 
+            WHERE employee_code = ? 
+            ORDER BY created_at DESC 
+            LIMIT 5
+        """, (employee_code,)).fetchall()
+        
+        return {
+            "employee": {
+                "name": employee_data.get("name"),
+                "designation": employee_data.get("designation"),
+                "team": employee_data.get("team"),
+                "location": employee_data.get("location"),
+                "doj": employee_data.get("doj")
+            },
+            "kras": {
+                "total": kras["total"] if kras else 0,
+                "completed": kras["completed"] if kras and kras["completed"] else 0
+            },
+            "training": {
+                "total": trainings["total"] if trainings else 0,
+                "completed": trainings["completed"] if trainings and trainings["completed"] else 0
+            },
+            "assets": {
+                "total": assets["total"] if assets else 0
+            },
+            "notifications": [dict(n) for n in notifications]
+        }
+
+    except Exception as e:
+        print(f"Employee Dashboard Error: {e}")
         return {"error": str(e)}
     finally:
         conn.close()
