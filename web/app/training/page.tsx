@@ -80,9 +80,9 @@ export default function TrainingManagement() {
     const fetchData = async () => {
         try {
             const [pRes, aRes, eRes] = await Promise.all([
-                fetch('http://localhost:8000/api/training/programs', { credentials: 'include' }),
-                fetch('http://localhost:8000/api/training/assignments', { credentials: 'include' }),
-                fetch('http://localhost:8000/api/employees', { credentials: 'include' })
+                fetch('/api/training/programs', { credentials: 'include' }),
+                fetch('/api/training/assignments', { credentials: 'include' }),
+                fetch('/api/employees', { credentials: 'include' })
             ]);
 
             if (pRes.ok) setPrograms(await pRes.json());
@@ -102,7 +102,7 @@ export default function TrainingManagement() {
         e.preventDefault();
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/training/programs', {
+            const res = await fetch('/api/training/programs', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -124,7 +124,7 @@ export default function TrainingManagement() {
         }
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/training/assign', {
+            const res = await fetch('/api/training/assign', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -142,7 +142,7 @@ export default function TrainingManagement() {
 
     const handleStatusUpdate = async (id: number, status: string) => {
         try {
-            const res = await fetch(`http://localhost:8000/api/training/assignment/${id}`, {
+            const res = await fetch(`/api/training/assignment/${id}`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

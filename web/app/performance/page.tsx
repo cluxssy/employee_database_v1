@@ -70,7 +70,7 @@ export default function PerformanceManagement() {
     const fetchInitialData = async () => {
         if (!user) return;
         try {
-            const res = await fetch('http://localhost:8000/api/employees', { credentials: 'include' });
+            const res = await fetch('/api/employees', { credentials: 'include' });
             if (res.ok) setEmployees(await res.json());
         } catch (err) {
             console.error("Failed to load data", err);
@@ -94,7 +94,7 @@ export default function PerformanceManagement() {
         if (!assessmentEmployee) return;
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/assessments/${assessmentEmployee}/${assessmentYear}`, { credentials: 'include' });
+            const res = await fetch(`/api/assessments/${assessmentEmployee}/${assessmentYear}`, { credentials: 'include' });
             if (res.ok) {
                 setAssessments(await res.json());
             }
@@ -120,7 +120,7 @@ export default function PerformanceManagement() {
 
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/assessments/save', {
+            const res = await fetch('/api/assessments/save', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

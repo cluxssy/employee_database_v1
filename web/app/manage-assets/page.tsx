@@ -84,7 +84,7 @@ export default function ManageAssets() {
 
     const fetchEmployees = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/employees', { credentials: 'include' });
+            const res = await fetch('/api/employees', { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 setEmployees(data);
@@ -97,7 +97,7 @@ export default function ManageAssets() {
     const fetchChecklist = async (code: string) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/assets/${code}`, { credentials: 'include' });
+            const res = await fetch(`/api/assets/${code}`, { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 // Merge with default to ensure all fields exist
@@ -123,7 +123,7 @@ export default function ManageAssets() {
         if (!selectedEmployee) return;
         setSaving(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/assets/${selectedEmployee.employee_code}`, {
+            const res = await fetch(`/api/assets/${selectedEmployee.employee_code}`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

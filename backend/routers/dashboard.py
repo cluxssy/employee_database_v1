@@ -214,7 +214,13 @@ def get_employee_dashboard_stats(current_user: dict = Depends(get_current_user))
             "assets": {
                 "total": asset_count
             },
-            "notifications": [dict(n) for n in notifications]
+            "notifications": [dict(n) for n in notifications],
+            "attendance": {
+                "status": "Present" if conn.execute("SELECT 1 FROM attendance WHERE employee_code = ? AND date = date('now')", (employee_code,)).fetchone() else "Absent"
+            },
+            "leaves": dict(
+                conn.execute("SELECT sick_used, sick_total, casual_used, casual_total FROM leave_balances WHERE employee_code = ? AND year = strftime('%Y', 'now')", (employee_code,)).fetchone() or {"sick_used": 0, "sick_total": 0, "casual_used": 0, "casual_total": 0}
+            )
         }
 
     except Exception as e:

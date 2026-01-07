@@ -50,14 +50,14 @@ export default function AdminPanel() {
     // Fetch Data
     const fetchUsers = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/admin/users', { credentials: 'include' });
+            const res = await fetch('/api/admin/users', { credentials: 'include' });
             if (res.ok) setSystemUsers(await res.json());
         } catch (err) { console.error(err); }
     };
 
     const fetchLogs = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/admin/logs', { credentials: 'include' });
+            const res = await fetch('/api/admin/logs', { credentials: 'include' });
             if (res.ok) setLogs(await res.json());
         } catch (err) { console.error(err); }
     };
@@ -79,7 +79,7 @@ export default function AdminPanel() {
 
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/admin/users', {
+            const res = await fetch('/api/admin/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -106,7 +106,7 @@ export default function AdminPanel() {
         if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`)) return;
 
         try {
-            const res = await fetch(`http://localhost:8000/api/admin/users/${id}`, {
+            const res = await fetch(`/api/admin/users/${id}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });

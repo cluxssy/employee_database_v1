@@ -44,7 +44,7 @@ export default function EmployeeDirectory() {
 
     const fetchEmployees = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/employees', { credentials: 'include' });
+            const res = await fetch('/api/employees', { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 setEmployees(data);
@@ -203,7 +203,7 @@ export default function EmployeeDirectory() {
                                                 <div className="w-full h-full rounded-full overflow-hidden bg-[#1a1a1a] relative">
                                                     {emp.photo_path ? (
                                                         <img
-                                                            src={`http://localhost:8000/static/${emp.photo_path}`}
+                                                            src={`/static/${emp.photo_path}`}
                                                             alt={emp.name}
                                                             className="w-full h-full object-cover"
                                                         />
@@ -246,7 +246,7 @@ export default function EmployeeDirectory() {
                                 <div key={emp.employee_code} className="group flex items-center gap-4 bg-[#121212] p-4 rounded-xl border border-[#222] hover:border-brand-purple/40 hover:bg-[#1a1a1a] transition-all">
                                     <div className="w-12 h-12 rounded-full overflow-hidden bg-[#222] flex-shrink-0">
                                         {emp.photo_path ? (
-                                            <img src={`http://localhost:8000/static/${emp.photo_path}`} alt={emp.name} className="w-full h-full object-cover" />
+                                            <img src={`/static/${emp.photo_path}`} alt={emp.name} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-500"><User size={20} /></div>
                                         )}

@@ -45,7 +45,7 @@ function OnboardingContent() {
         }
 
         // Verify Token
-        fetch('http://localhost:8000/api/onboarding/verify-token', {
+        fetch('/api/onboarding/verify-token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token })
@@ -136,7 +136,7 @@ function OnboardingContent() {
             if (resume) data.append('cv_file', resume);
             if (documents) data.append('id_proof_file', documents);
 
-            const res = await fetch('http://localhost:8000/api/onboarding/complete', {
+            const res = await fetch('/api/onboarding/complete', {
                 method: 'POST',
                 body: data
             });

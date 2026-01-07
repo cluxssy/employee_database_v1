@@ -53,7 +53,7 @@ export default function MyPerformance() {
 
     const fetchMyKRAs = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/performance/my-kras', { credentials: 'include' });
+            const res = await fetch('/api/performance/my-kras', { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 setAssignments(data);
@@ -75,7 +75,7 @@ export default function MyPerformance() {
         if (!selectedAssignment) return;
         setSubmitting(true);
         try {
-            const res = await fetch('http://localhost:8000/api/performance/self-rating', {
+            const res = await fetch('/api/performance/self-rating', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

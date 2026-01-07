@@ -14,7 +14,7 @@ export default function EmployeeDashboard({ user }: { user: any }) {
 
     const fetchStats = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/dashboard/employee-stats', { credentials: 'include' });
+            const res = await fetch('/api/dashboard/employee-stats', { credentials: 'include' });
             if (res.ok) {
                 const json = await res.json();
                 setStats(json);
@@ -59,89 +59,95 @@ export default function EmployeeDashboard({ user }: { user: any }) {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                {/* 1. Performance / KRAs */}
-                <div className="bg-[#111] border border-[#222] p-6 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Target size={100} />
+                {/* 1. Attendance Today */}
+                <div className="bg-[#111] border border-[#222] p-6 rounded-3xl relative overflow-hidden group hover:border-brand-purple/50 transition-colors">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Clock size={80} />
                     </div>
-                    <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div>
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                                    <Target size={24} />
-                                </div>
-                                <span className="text-2xl font-bold">{kraPercent}%</span>
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className={`p-3 rounded-xl ${stats?.attendance?.status === 'Present' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                <Clock size={24} />
                             </div>
-                            <h3 className="text-lg font-bold mb-1">Performance</h3>
-                            <p className="text-sm text-gray-400">
-                                {kras.completed} / {kras.total} KRAs Completed
-                            </p>
                         </div>
-                        <div className="mt-6">
-                            <div className="h-2 w-full bg-[#222] rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${kraPercent}%` }}></div>
-                            </div>
-                            <Link href="/my-performance" className="mt-4 inline-flex items-center text-sm text-blue-400 hover:text-blue-300 font-medium">
-                                View Details <ArrowRight size={16} className="ml-1" />
-                            </Link>
-                        </div>
+                        <h3 className="text-lg font-bold mb-1">Today's Status</h3>
+                        <p className={`text-2xl font-bold ${stats?.attendance?.status === 'Present' ? 'text-green-400' : 'text-gray-400'}`}>
+                            {stats?.attendance?.status || 'Absent'}
+                        </p>
+                        <Link href="/attendance" className="mt-4 inline-flex items-center text-sm text-gray-500 hover:text-white transition-colors">
+                            Manage Attendance <ArrowRight size={14} className="ml-1" />
+                        </Link>
                     </div>
                 </div>
 
-                {/* 2. Training */}
-                <div className="bg-[#111] border border-[#222] p-6 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <BookOpen size={100} />
+                {/* 2. Performance / KRAs */}
+                <div className="bg-[#111] border border-[#222] p-6 rounded-3xl relative overflow-hidden group hover:border-blue-500/50 transition-colors">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Target size={80} />
                     </div>
-                    <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div>
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
-                                    <BookOpen size={24} />
-                                </div>
-                                <span className="text-2xl font-bold">{trainingPercent}%</span>
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+                                <Target size={24} />
                             </div>
-                            <h3 className="text-lg font-bold mb-1">Training</h3>
-                            <p className="text-sm text-gray-400">
-                                {training.completed} / {training.total} Modules Completed
-                            </p>
+                            <span className="text-2xl font-bold">{kraPercent}%</span>
                         </div>
-                        <div className="mt-6">
-                            <div className="h-2 w-full bg-[#222] rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-500 transition-all duration-1000" style={{ width: `${trainingPercent}%` }}></div>
-                            </div>
-                            <Link href="/training" className="mt-4 inline-flex items-center text-sm text-purple-400 hover:text-purple-300 font-medium">
-                                Go to Learning <ArrowRight size={16} className="ml-1" />
-                            </Link>
+                        <h3 className="text-lg font-bold mb-1">Performance</h3>
+                        <div className="w-full bg-[#222] rounded-full h-1.5 mt-2 mb-2">
+                            <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${kraPercent}%` }}></div>
                         </div>
+                        <p className="text-xs text-gray-500">{kras.completed}/{kras.total} KRAs Completed</p>
                     </div>
                 </div>
 
-                {/* 3. Assets */}
-                <div className="bg-[#111] border border-[#222] p-6 rounded-3xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Laptop size={100} />
+                {/* 3. Training */}
+                <div className="bg-[#111] border border-[#222] p-6 rounded-3xl relative overflow-hidden group hover:border-purple-500/50 transition-colors">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <BookOpen size={80} />
                     </div>
-                    <div className="relative z-10 flex flex-col h-full justify-between">
-                        <div>
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-green-500/10 rounded-xl text-green-400">
-                                    <Laptop size={24} />
-                                </div>
-                                <span className="text-2xl font-bold">{assets.total}</span>
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
+                                <BookOpen size={24} />
                             </div>
-                            <h3 className="text-lg font-bold mb-1">Assets</h3>
-                            <p className="text-sm text-gray-400">Devices assigned to you</p>
+                            <span className="text-2xl font-bold">{trainingPercent}%</span>
                         </div>
-                        <div className="mt-6">
-                            <Link href="/manage-assets" className="inline-flex items-center text-sm text-green-400 hover:text-green-300 font-medium">
-                                View Inventory <ArrowRight size={16} className="ml-1" />
-                            </Link>
+                        <h3 className="text-lg font-bold mb-1">Training</h3>
+                        <div className="w-full bg-[#222] rounded-full h-1.5 mt-2 mb-2">
+                            <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${trainingPercent}%` }}></div>
                         </div>
+                        <p className="text-xs text-gray-500">{training.completed}/{training.total} Modules Done</p>
                     </div>
                 </div>
+
+                {/* 4. Leave Balance (Sick/Casual) */}
+                <div className="bg-[#111] border border-[#222] p-6 rounded-3xl relative overflow-hidden group hover:border-orange-500/50 transition-colors">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <CheckCircle size={80} />
+                    </div>
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-orange-500/10 rounded-xl text-orange-400">
+                                <CheckCircle size={24} />
+                            </div>
+                        </div>
+                        <h3 className="text-lg font-bold mb-2">Leave Balance</h3>
+                        <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-400">Sick</span>
+                            <span className="text-white font-bold">{stats?.leaves?.sick_total - stats?.leaves?.sick_used}/{stats?.leaves?.sick_total}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Casual</span>
+                            <span className="text-white font-bold">{stats?.leaves?.casual_total - stats?.leaves?.casual_used}/{stats?.leaves?.casual_total}</span>
+                        </div>
+                        <Link href="/attendance" className="mt-4 block text-xs text-orange-400 hover:text-orange-300">
+                            Apply for Leave →
+                        </Link>
+                    </div>
+                </div>
+
             </div>
 
             {/* Notifications / Announcements */}

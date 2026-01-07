@@ -140,7 +140,7 @@ function InviteForm() {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/options', { credentials: 'include' });
+                const res = await fetch('/api/options', { credentials: 'include' });
                 if (res.ok) setOptions(await res.json());
             } catch (e) { console.error("Failed to load options"); }
         };
@@ -153,7 +153,7 @@ function InviteForm() {
         setMessage({ type: '', text: '', link: '' });
 
         try {
-            const res = await fetch('http://localhost:8000/api/onboarding/invite', {
+            const res = await fetch('/api/onboarding/invite', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -258,7 +258,7 @@ function InviteStatusList() {
 
     const fetchInvites = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/onboarding/invites', { credentials: 'include' });
+            const res = await fetch('/api/onboarding/invites', { credentials: 'include' });
             if (res.ok) setInvites(await res.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -268,7 +268,7 @@ function InviteStatusList() {
 
     const handleRevoke = async (id: number) => {
         if (!confirm("Are you sure?")) return;
-        await fetch(`http://localhost:8000/api/onboarding/invite/${id}`, { method: 'DELETE', credentials: 'include' });
+        await fetch(`/api/onboarding/invite/${id}`, { method: 'DELETE', credentials: 'include' });
         fetchInvites();
     };
 
@@ -342,7 +342,7 @@ function PendingApprovalsList() {
 
     const fetchApprovals = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/onboarding/approvals', { credentials: 'include' });
+            const res = await fetch('/api/onboarding/approvals', { credentials: 'include' });
             if (res.ok) setApprovals(await res.json());
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -438,7 +438,7 @@ function ApprovalModal({ employee, onClose, onSuccess }: any) {
     useEffect(() => {
         const fetchManagers = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/employees', { credentials: 'include' });
+                const res = await fetch('/api/employees', { credentials: 'include' });
                 if (res.ok) {
                     const data = await res.json();
                     // Filter for Management/Admin roles
@@ -464,7 +464,7 @@ function ApprovalModal({ employee, onClose, onSuccess }: any) {
             formData.append('mediclaim_included', form.mediclaim_included);
             formData.append('notes', form.notes);
 
-            const res = await fetch(`http://localhost:8000/api/onboarding/approve/${employee.employee_code}`, {
+            const res = await fetch(`/api/onboarding/approve/${employee.employee_code}`, {
                 method: 'POST',
                 credentials: 'include',
                 body: formData
@@ -564,7 +564,7 @@ function ManualEntryForm({ router }: any) {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/options', { credentials: 'include' });
+                const res = await fetch('/api/options', { credentials: 'include' });
                 if (res.ok) setOptions(await res.json());
             } catch (e) { console.error("Failed to load options"); }
         };
@@ -623,7 +623,7 @@ function ManualEntryForm({ router }: any) {
             if (files.cv) data.append('cv_file', files.cv);
             if (files.id_proof) data.append('id_proof_file', files.id_proof);
 
-            const res = await fetch('http://localhost:8000/api/employee', {
+            const res = await fetch('/api/employee', {
                 method: 'POST',
                 credentials: 'include',
                 body: data

@@ -42,9 +42,9 @@ export default function AttendancePage() {
     const fetchInitialData = async () => {
         try {
             const [statusRes, balanceRes, leavesRes] = await Promise.all([
-                fetch('http://localhost:8000/api/attendance/status', { credentials: 'include' }),
-                fetch('http://localhost:8000/api/attendance/leave/balance', { credentials: 'include' }),
-                fetch('http://localhost:8000/api/attendance/leave/my-requests', { credentials: 'include' })
+                fetch('/api/attendance/status', { credentials: 'include' }),
+                fetch('/api/attendance/leave/balance', { credentials: 'include' }),
+                fetch('/api/attendance/leave/my-requests', { credentials: 'include' })
             ]);
 
             if (statusRes.ok) setStatus(await statusRes.json());
@@ -59,7 +59,7 @@ export default function AttendancePage() {
 
     const handleClockIn = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/attendance/clock-in', {
+            const res = await fetch('/api/attendance/clock-in', {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -80,7 +80,7 @@ export default function AttendancePage() {
         }
 
         try {
-            const res = await fetch('http://localhost:8000/api/attendance/clock-out', {
+            const res = await fetch('/api/attendance/clock-out', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -101,7 +101,7 @@ export default function AttendancePage() {
     const handleApplyLeave = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await fetch('http://localhost:8000/api/attendance/leave/apply', {
+            const res = await fetch('/api/attendance/leave/apply', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -360,15 +360,15 @@ function ManagerSection() {
         setLoading(true);
         try {
             const promises = [
-                fetch('http://localhost:8000/api/attendance/admin/today', { credentials: 'include' }),
-                fetch('http://localhost:8000/api/attendance/leave/all-requests', { credentials: 'include' })
+                fetch('/api/attendance/admin/today', { credentials: 'include' }),
+                fetch('/api/attendance/leave/all-requests', { credentials: 'include' })
             ];
 
             // Only fetch summary if tab is active
             if (activeTab === 'summary') {
                 const year = currentMonth.getFullYear();
                 const month = currentMonth.getMonth() + 1;
-                promises.push(fetch(`http://localhost:8000/api/attendance/admin/summary?year=${year}&month=${month}`, { credentials: 'include' }));
+                promises.push(fetch(`/api/attendance/admin/summary?year=${year}&month=${month}`, { credentials: 'include' }));
             }
 
             const results = await Promise.all(promises);
@@ -393,7 +393,7 @@ function ManagerSection() {
             formData.append('action', action);
             if (reason) formData.append('reason', reason);
 
-            const res = await fetch(`http://localhost:8000/api/attendance/leave/action/${id}`, {
+            const res = await fetch(`/api/attendance/leave/action/${id}`, {
                 method: 'POST',
                 body: formData,
                 credentials: 'include'

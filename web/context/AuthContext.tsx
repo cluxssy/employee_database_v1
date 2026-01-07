@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             // First check memory/context (handled by state)
             // Then check API (for page reloads)
-            const res = await fetch('http://localhost:8000/api/auth/check', { credentials: 'include' });
+            const res = await fetch('/api/auth/check', { credentials: 'include' });
             const data = await res.json();
 
             if (data.authenticated && data.user) {
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = async () => {
         try {
-            await fetch('http://localhost:8000/api/auth/logout', { method: 'POST', credentials: 'include' });
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         } catch (e) {
             console.error("Logout error", e);
         }

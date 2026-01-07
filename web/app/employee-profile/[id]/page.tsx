@@ -118,7 +118,7 @@ export default function EmployeeProfile() {
         // Fetch dropdown options
         const fetchOptions = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/options', { credentials: 'include' });
+                const res = await fetch('/api/options', { credentials: 'include' });
                 if (res.ok) {
                     const data = await res.json();
                     setOptions(data);
@@ -156,7 +156,7 @@ export default function EmployeeProfile() {
 
     const fetchEmployeeDetails = async (id: string) => {
         try {
-            const res = await fetch(`http://localhost:8000/api/employee/${id}`, { credentials: 'include' });
+            const res = await fetch(`/api/employee/${id}`, { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
                 setEmployee(data);
@@ -188,7 +188,7 @@ export default function EmployeeProfile() {
     const saveChanges = async () => {
         if (!employee) return;
         try {
-            const res = await fetch(`http://localhost:8000/api/employee/${employee.employee_code}`, {
+            const res = await fetch(`/api/employee/${employee.employee_code}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editForm),
@@ -210,7 +210,7 @@ export default function EmployeeProfile() {
     const handleDeleteEmployee = async () => {
         if (!employee) return;
         try {
-            const res = await fetch(`http://localhost:8000/api/employee/${employee.employee_code}`, {
+            const res = await fetch(`/api/employee/${employee.employee_code}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -266,7 +266,7 @@ export default function EmployeeProfile() {
                             <div className="w-40 h-40 rounded-full p-1 bg-[#111] overflow-hidden shadow-2xl">
                                 <div className="w-full h-full rounded-full bg-gray-800 overflow-hidden relative group">
                                     {employee.photo_path ? (
-                                        <img src={`http://localhost:8000/static/${employee.photo_path}`} alt={employee.name} className="w-full h-full object-cover" />
+                                        <img src={`/static/${employee.photo_path}`} alt={employee.name} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-gray-500"><User size={64} /></div>
                                     )}
@@ -441,14 +441,14 @@ export default function EmployeeProfile() {
                             </h3>
                             <div className="space-y-3">
                                 {employee.cv_path ? (
-                                    <a href={`http://localhost:8000/static/${employee.cv_path}`} target="_blank" className="block w-full py-3 px-4 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-sm text-gray-300 transition-all border border-[#333] flex justify-between items-center group">
+                                    <a href={`/static/${employee.cv_path}`} target="_blank" className="block w-full py-3 px-4 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-sm text-gray-300 transition-all border border-[#333] flex justify-between items-center group">
                                         <span>Resume / CV</span>
                                         <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                                     </a>
                                 ) : null}
 
                                 {employee.id_proofs ? (
-                                    <a href={`http://localhost:8000/static/${employee.id_proofs}`} target="_blank" className="block w-full py-3 px-4 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-sm text-gray-300 transition-all border border-[#333] flex justify-between items-center group">
+                                    <a href={`/static/${employee.id_proofs}`} target="_blank" className="block w-full py-3 px-4 bg-[#1a1a1a] hover:bg-[#222] rounded-xl text-sm text-gray-300 transition-all border border-[#333] flex justify-between items-center group">
                                         <span>ID Proofs</span>
                                         <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
                                     </a>
@@ -695,7 +695,7 @@ function OffboardModal({ employee, onClose, onSuccess }: any) {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/employee/${employee.employee_code}/offboard`, {
+            const res = await fetch(`/api/employee/${employee.employee_code}/offboard`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
