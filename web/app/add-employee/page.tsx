@@ -135,6 +135,17 @@ function InviteForm() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '', link: '' });
     const [form, setForm] = useState({ name: '', email: '', role: 'Employee', department: '', designation: '' });
+    const [options, setOptions] = useState<{ teams: string[], designations: string[] }>({ teams: [], designations: [] });
+
+    useEffect(() => {
+        const fetchOptions = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/options', { credentials: 'include' });
+                if (res.ok) setOptions(await res.json());
+            } catch (e) { console.error("Failed to load options"); }
+        };
+        fetchOptions();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -195,8 +206,18 @@ function InviteForm() {
                 <InputField label="Email Address" type="email" value={form.email} onChange={(e: any) => setForm({ ...form, email: e.target.value })} required />
 
                 <div className="grid grid-cols-2 gap-4">
-                    <InputField label="Department / Team" value={form.department} onChange={(e: any) => setForm({ ...form, department: e.target.value })} />
-                    <InputField label="Designation" value={form.designation} onChange={(e: any) => setForm({ ...form, designation: e.target.value })} />
+                    <ListSelectField
+                        label="Department / Team"
+                        value={form.department}
+                        onChange={(e: any) => setForm({ ...form, department: e.target.value })}
+                        options={options.teams}
+                    />
+                    <ListSelectField
+                        label="Designation"
+                        value={form.designation}
+                        onChange={(e: any) => setForm({ ...form, designation: e.target.value })}
+                        options={options.designations}
+                    />
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -538,6 +559,17 @@ function ApprovalModal({ employee, onClose, onSuccess }: any) {
 function ManualEntryForm({ router }: any) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
+    const [options, setOptions] = useState<{ teams: string[], designations: string[], managers: { name: string, code: string }[] }>({ teams: [], designations: [], managers: [] });
+
+    useEffect(() => {
+        const fetchOptions = async () => {
+            try {
+                const res = await fetch('http://localhost:8000/api/options', { credentials: 'include' });
+                if (res.ok) setOptions(await res.json());
+            } catch (e) { console.error("Failed to load options"); }
+        };
+        fetchOptions();
+    }, []);
 
     const [formData, setFormData] = useState({
         code: '', name: '', dob: '', phone: '', emergency: '', email: '',
@@ -650,9 +682,24 @@ function ManualEntryForm({ router }: any) {
                         <Briefcase className="text-blue-500" size={20} /> Employment Details
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <InputField label="Team / Dept" name="team" value={formData.team} onChange={handleChange} required />
-                        <InputField label="Designation" name="role" value={formData.role} onChange={handleChange} required />
-                        <InputField label="Reporting Manager" name="manager" value={formData.manager} onChange={handleChange} required />
+                        <ListSelectField label="Team / Dept" value={formData.team} onChange={(e: any) => setFormData({ ...formData, team: e.target.value })} options={options.teams} />
+                        <ListSelectField label="Designation" value={formData.role} onChange={(e: any) => setFormData({ ...formData, role: e.target.value })} options={options.designations} />
+
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs text-gray-500 uppercase tracking-wider">Reporting Manager</label>
+                            <select
+                                name="manager"
+                                value={formData.manager}
+                                onChange={handleChange}
+                                className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+                            >
+                                <option value="">Select Manager</option>
+                                {options.managers.map((m) => (
+                                    <option key={m.code} value={m.name}>{m.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
                         <InputField label="Date of Joining" name="doj" type="date" value={formData.doj} onChange={handleChange} required />
                         <InputField label="Office Location" name="location" value={formData.location} onChange={handleChange} />
 
@@ -774,3 +821,24 @@ const FileUpload = ({ label, onChange, file }: { label: string, onChange: (e: Re
         </div>
     </div>
 );
+
+const ListSelectField = ({ label, value, onChange, options }: { label: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, options: string[] }) => {
+    const listId = `list-${label.replace(/\s+/g, '-').toLowerCase()}`;
+    return (
+        <div className="flex flex-col gap-2">
+            <label className="text-xs text-gray-500 uppercase tracking-wider">{label}</label>
+            <input
+                list={listId}
+                value={value}
+                onChange={onChange}
+                className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors placeholder-gray-700"
+                placeholder={`Select or type ${label}`}
+            />
+            <datalist id={listId}>
+                {options.map((opt, i) => (
+                    <option key={i} value={opt} />
+                ))}
+            </datalist>
+        </div>
+    );
+};

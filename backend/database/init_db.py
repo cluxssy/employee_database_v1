@@ -38,12 +38,8 @@ def create_tables():
             current_address TEXT,
             permanent_address TEXT,
             education_details TEXT,
-            checklist_bag INTEGER DEFAULT 0,
-            checklist_mediclaim INTEGER DEFAULT 0,
-            checklist_pf INTEGER DEFAULT 0,
-            checklist_email_access INTEGER DEFAULT 0,
-            checklist_groups INTEGER DEFAULT 0,
-            checklist_relieving_letter INTEGER DEFAULT 0,
+            education_details TEXT,
+            -- Moved checklists to 'assets' table
             employment_status TEXT DEFAULT 'Active',
             photo_path TEXT,
             cv_path TEXT,
@@ -101,18 +97,45 @@ def create_tables():
         )
     ''')
 
-    # 4) Assets Table
+    # 4) Assets Checklist Table (New)
     c.execute('''
         CREATE TABLE IF NOT EXISTS assets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            employee_code TEXT,
-            asset_id TEXT,
-            issued_to TEXT,
-            issue_date TEXT,
-            return_date TEXT,
-            advance_salary_adjustment TEXT,
-            leave_adjustment TEXT,
-            laptop_returned BOOLEAN
+            employee_code TEXT UNIQUE,
+            
+            -- Onboarding
+            ob_laptop INTEGER DEFAULT 0,
+            ob_laptop_bag INTEGER DEFAULT 0,
+            ob_headphones INTEGER DEFAULT 0,
+            ob_mouse INTEGER DEFAULT 0,
+            ob_extra_hardware INTEGER DEFAULT 0,
+            ob_client_assets INTEGER DEFAULT 0,
+            
+            ob_id_card INTEGER DEFAULT 0, -- New
+            ob_email_access INTEGER DEFAULT 0, -- Moved from employees
+            ob_groups INTEGER DEFAULT 0, -- Moved from employees
+            ob_mediclaim INTEGER DEFAULT 0, -- Moved from employees
+            ob_pf INTEGER DEFAULT 0, -- Moved from employees
+            
+            ob_remarks TEXT,
+
+            -- Clearance
+            cl_laptop INTEGER DEFAULT 0,
+            cl_laptop_bag INTEGER DEFAULT 0,
+            cl_headphones INTEGER DEFAULT 0,
+            cl_mouse INTEGER DEFAULT 0,
+            cl_extra_hardware INTEGER DEFAULT 0,
+            cl_client_assets INTEGER DEFAULT 0,
+            
+            cl_id_card INTEGER DEFAULT 0, -- New
+            cl_email_access INTEGER DEFAULT 0, -- Revoke
+            cl_groups INTEGER DEFAULT 0, -- Remove
+            cl_relieving_letter INTEGER DEFAULT 0, -- Moved from employees
+
+            cl_remarks TEXT,
+
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (employee_code) REFERENCES employees(employee_code)
         )
     ''')
 

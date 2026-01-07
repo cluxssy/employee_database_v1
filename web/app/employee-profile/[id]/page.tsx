@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Phone, Briefcase, MapPin, Award, BookOpen, User, Monitor, FileText, TrendingUp, ClipboardCheck, Trash2, Target, Edit2, Save, ArrowRight, Settings } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Briefcase, MapPin, Award, BookOpen, User, Monitor, FileText, TrendingUp, ClipboardCheck, Trash2, Target, Edit2, Save, ArrowRight, Settings, AlertCircle } from 'lucide-react';
 import StaggeredMenu from '../../../components/navBar';
 import Waves from '../../../components/Background/Waves';
 import { useAuth } from '../../../context/AuthContext';
@@ -109,26 +109,25 @@ export default function EmployeeProfile() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'overview' | 'assets' | 'performance'>('overview');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showOffboardModal, setShowOffboardModal] = useState(false);
 
-    // Managers List for Dropdown
-    const [managers, setManagers] = useState<any[]>([]);
+    // Options for Dropdowns
+    const [options, setOptions] = useState<{ teams: string[], designations: string[], managers: { name: string, code: string }[] }>({ teams: [], designations: [], managers: [] });
 
     useEffect(() => {
-        // Fetch managers list
-        const fetchManagers = async () => {
+        // Fetch dropdown options
+        const fetchOptions = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/employees', { credentials: 'include' });
+                const res = await fetch('http://localhost:8000/api/options', { credentials: 'include' });
                 if (res.ok) {
                     const data = await res.json();
-                    // Filter for Management/Admin roles
-                    const validManagers = data.filter((emp: any) => emp.role === 'Management' || emp.role === 'Admin');
-                    setManagers(validManagers);
+                    setOptions(data);
                 }
             } catch (error) {
-                console.error("Failed to fetch managers", error);
+                console.error("Failed to fetch options", error);
             }
         };
-        fetchManagers();
+        fetchOptions();
     }, []);
 
 
@@ -296,12 +295,18 @@ export default function EmployeeProfile() {
                                         placeholder="Designation"
                                     />
                                     <div className="flex gap-2">
-                                        <input
-                                            value={editForm.team || ''}
-                                            onChange={(e) => handleEditChange('team', e.target.value)}
-                                            className="text-sm text-gray-400 bg-transparent border-b border-white/20 outline-none w-1/3"
-                                            placeholder="Team"
-                                        />
+                                        <div className="w-1/3">
+                                            <select
+                                                value={editForm.team || ''}
+                                                onChange={(e) => handleEditChange('team', e.target.value)}
+                                                className="text-sm text-gray-400 bg-transparent border-b border-white/20 outline-none w-full appearance-none"
+                                            >
+                                                <option value="" className="bg-black">Select Team</option>
+                                                {/* We need options here. Let's use a datalist or select if we have options state in this component */}
+                                                {options.teams.map(t => <option key={t} value={t} className="bg-black">{t}</option>)}
+                                            </select>
+                                        </div>
+
                                         <input
                                             value={editForm.location || ''}
                                             onChange={(e) => handleEditChange('location', e.target.value)}
@@ -394,8 +399,8 @@ export default function EmployeeProfile() {
                                                         className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:border-brand-purple outline-none transition-colors"
                                                     >
                                                         <option value="">Select Manager</option>
-                                                        {managers.map(m => (
-                                                            <option key={m.employee_code} value={m.name}>{m.name} ({m.employee_code})</option>
+                                                        {options.managers.map(m => (
+                                                            <option key={m.code} value={m.name}>{m.name} ({m.code})</option>
                                                         ))}
                                                     </select>
                                                 </div>
@@ -600,19 +605,40 @@ export default function EmployeeProfile() {
                     </div>
                 </div>
 
-                {/* Delete Zone - ONLY FOR ADMINS */}
+                {/* Admin Zone - Offboarding & Deletion */}
                 {canDelete && (
                     <div className="mt-20 pt-10 border-t border-[#222]">
-                        <div className="flex justify-between items-center opacity-40 hover:opacity-100 transition-opacity">
-                            <p className="text-sm text-gray-500">Admin Area</p>
-                            <button
-                                onClick={() => setShowDeleteConfirm(true)}
-                                className="text-red-500 hover:bg-red-500/10 px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                            >
-                                <Trash2 size={16} /> Delete Employee
-                            </button>
+                        <div className="flex justify-between items-center">
+                            <p className="text-sm text-gray-500 font-bold uppercase tracking-wider">Admin Actions</p>
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setShowOffboardModal(true)}
+                                    className="bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-500 border border-yellow-800 px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+                                >
+                                    <AlertCircle size={16} /> Offboard Employee
+                                </button>
+
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="text-red-500 hover:bg-red-500/10 px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                                >
+                                    <Trash2 size={16} /> Delete Permanent
+                                </button>
+                            </div>
                         </div>
                     </div>
+                )}
+
+                {/* Offboard Confirmation Modal */}
+                {showOffboardModal && (
+                    <OffboardModal
+                        employee={employee}
+                        onClose={() => setShowOffboardModal(false)}
+                        onSuccess={() => {
+                            setShowOffboardModal(false);
+                            fetchEmployeeDetails(employee.employee_code); // Refresh data
+                        }}
+                    />
                 )}
 
                 {/* Delete Confirmation Modal */}
@@ -654,6 +680,101 @@ function EditField({ label, value, onChange }: { label: string, value?: string, 
                 onChange={(e) => onChange(e.target.value)}
                 className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:border-brand-purple outline-none transition-colors"
             />
+        </div>
+    );
+}
+
+function OffboardModal({ employee, onClose, onSuccess }: any) {
+    const [submitting, setSubmitting] = useState(false);
+    const [form, setForm] = useState({
+        exit_date: new Date().toISOString().split('T')[0],
+        exit_reason: 'Resignation'
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            const res = await fetch(`http://localhost:8000/api/employee/${employee.employee_code}/offboard`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(form)
+            });
+
+            if (res.ok) {
+                onSuccess();
+            } else {
+                alert("Failed to offboard employee");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error offboarding employee");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-[#111] border border-yellow-800/50 rounded-2xl w-full max-w-md shadow-2xl animate-fade-in-up">
+                <div className="p-6 border-b border-yellow-900/30">
+                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <AlertCircle className="text-yellow-500" /> Offboard Employee
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Deactivate account and mark as Exited.
+                    </p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-xs text-gray-500 uppercase font-bold">Exit Date</label>
+                            <input
+                                type="date"
+                                value={form.exit_date}
+                                onChange={e => setForm({ ...form, exit_date: e.target.value })}
+                                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-white focus:border-yellow-600 outline-none"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs text-gray-500 uppercase font-bold">Reason for Exit</label>
+                            <select
+                                value={form.exit_reason}
+                                onChange={e => setForm({ ...form, exit_reason: e.target.value })}
+                                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-white focus:border-yellow-600 outline-none"
+                            >
+                                <option>Resignation</option>
+                                <option>Termination</option>
+                                <option>Absconding</option>
+                                <option>Contract End</option>
+                                <option>Retirement</option>
+                                <option>Death</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2 bg-[#222] hover:bg-[#333] text-white rounded-lg font-medium transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-bold transition-colors shadow-lg shadow-yellow-900/20"
+                        >
+                            {submitting ? 'Processing...' : 'Confirm Offboard'}
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }

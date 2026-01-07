@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, Calendar, CheckCircle, XCircle, Coffee, FileText, ArrowRight, User } from 'lucide-react';
+import { Clock, Calendar, CheckCircle, XCircle, Coffee, FileText, ArrowRight, ArrowLeft, User } from 'lucide-react';
 import StaggeredMenu from '../../components/navBar';
 import Waves from '../../components/Background/Waves';
 import { useAuth } from '../../context/AuthContext';
@@ -253,7 +253,7 @@ export default function AttendancePage() {
                                                     </div>
                                                     <div className="flex items-center gap-4">
                                                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${leave.status === 'Approved' ? 'bg-green-500/10 text-green-500' :
-                                                                leave.status === 'Rejected' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500'
+                                                            leave.status === 'Rejected' ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500'
                                                             }`}>
                                                             {leave.status}
                                                         </span>
@@ -349,25 +349,42 @@ export default function AttendancePage() {
 }
 
 function ManagerSection() {
-    const [activeTab, setActiveTab] = useState<'logs' | 'approvals'>('approvals');
+    const [activeTab, setActiveTab] = useState<'logs' | 'approvals' | 'summary'>('approvals');
     const [logs, setLogs] = useState<any[]>([]);
     const [requests, setRequests] = useState<any[]>([]);
+    const [summary, setSummary] = useState<any[]>([]);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [logsRes, reqsRes] = await Promise.all([
+            const promises = [
                 fetch('http://localhost:8000/api/attendance/admin/today', { credentials: 'include' }),
                 fetch('http://localhost:8000/api/attendance/leave/all-requests', { credentials: 'include' })
-            ]);
-            if (logsRes.ok) setLogs(await logsRes.json());
-            if (reqsRes.ok) setRequests(await reqsRes.json());
+            ];
+
+            // Only fetch summary if tab is active
+            if (activeTab === 'summary') {
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth() + 1;
+                promises.push(fetch(`http://localhost:8000/api/attendance/admin/summary?year=${year}&month=${month}`, { credentials: 'include' }));
+            }
+
+            const results = await Promise.all(promises);
+
+            if (results[0].ok) setLogs(await results[0].json());
+            if (results[1].ok) setRequests(await results[1].json());
+
+            if (activeTab === 'summary' && results[2] && results[2].ok) {
+                setSummary(await results[2].json());
+            }
+
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { fetchData(); }, [activeTab, currentMonth]);
 
     const handleApproval = async (id: number, action: 'Approved' | 'Rejected', reason: string = '') => {
         if (!confirm(`Confirm ${action}?`)) return;
@@ -386,6 +403,12 @@ function ManagerSection() {
         } catch (e) { alert("Network error"); }
     };
 
+    const changeMonth = (delta: number) => {
+        const newDate = new Date(currentMonth);
+        newDate.setMonth(newDate.getMonth() + delta);
+        setCurrentMonth(newDate);
+    };
+
     return (
         <div className="bg-[#111]/80 backdrop-blur-xl border border-[#222] rounded-3xl p-6 mb-8 overflow-hidden">
             <div className="flex justify-between items-center mb-6">
@@ -398,6 +421,7 @@ function ManagerSection() {
                 <div className="flex gap-2 bg-[#1a1a1a] p-1 rounded-lg">
                     <button onClick={() => setActiveTab('approvals')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'approvals' ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-white'}`}>Approvals ({requests.length})</button>
                     <button onClick={() => setActiveTab('logs')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'logs' ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-white'}`}>Daily Logs</button>
+                    <button onClick={() => setActiveTab('summary')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'summary' ? 'bg-[#333] text-white' : 'text-gray-500 hover:text-white'}`}>Monthly Grid</button>
                 </div>
             </div>
 
@@ -440,7 +464,7 @@ function ManagerSection() {
                                 {logs.map(log => (
                                     <div key={log.id} className="bg-[#1a1a1a] p-4 rounded-xl border border-[#333] flex flex-col md:flex-row justify-between gap-4">
                                         <div>
-                                            <p className="font-bold text-white text-lg">{log.employee_name}</p>
+                                            <p className="font-bold text-white text-lg">{log.employee_name} <span className="text-xs text-gray-500 font-normal">({log.designation})</span></p>
                                             <div className="flex gap-4 text-sm text-gray-400 mt-1">
                                                 <span className="flex items-center gap-1"><Clock size={14} /> In: {log.clock_in}</span>
                                                 {log.clock_out && <span className="flex items-center gap-1"><CheckCircle size={14} className="text-green-500" /> Out: {log.clock_out}</span>}
@@ -460,6 +484,73 @@ function ManagerSection() {
                                     </div>
                                 ))}
                             </div>
+                    )}
+
+                    {activeTab === 'summary' && (
+                        <div>
+                            <div className="flex items-center justify-between mb-4 bg-[#1a1a1a] p-3 rounded-xl border border-[#333]">
+                                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-[#333] rounded-lg text-gray-400 hover:text-white"><ArrowLeft size={20} /></button>
+                                <h3 className="font-bold text-white text-lg">
+                                    {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                                </h3>
+                                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-[#333] rounded-lg text-gray-400 hover:text-white"><ArrowRight size={20} /></button>
+                            </div>
+
+                            <div className="overflow-x-auto rounded-xl border border-[#333]">
+                                <div className="inline-block min-w-full align-middle">
+                                    <table className="min-w-full divide-y divide-[#333]">
+                                        <thead className="bg-[#1a1a1a]">
+                                            <tr>
+                                                <th scope="col" className="sticky left-0 z-10 py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-white bg-[#1a1a1a]">Employee</th>
+                                                {summary.length > 0 && summary[0].days.map((d: any) => (
+                                                    <th key={d.day} scope="col" className="px-2 py-3.5 text-center text-xs font-medium text-gray-400 w-8">
+                                                        {d.day}
+                                                    </th>
+                                                ))}
+                                                <th className="px-3 py-3.5 text-center text-xs font-semibold text-gray-400">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#333] bg-[#111]">
+                                            {summary.map((emp) => (
+                                                <tr key={emp.code}>
+                                                    <td className="sticky left-0 z-10 whitespace-nowrap py-3 pl-4 pr-3 text-sm font-medium text-gray-200 bg-[#111] border-r border-[#333] shadow-xl">
+                                                        {emp.name}
+                                                    </td>
+                                                    {emp.days.map((day: any) => {
+                                                        let colorClass = 'bg-gray-800/20'; // Default/Absent
+                                                        if (day.status === 'Present') colorClass = 'bg-green-500';
+                                                        else if (day.status === 'Leave') colorClass = 'bg-blue-500';
+                                                        else if (day.status === 'Weekend') colorClass = 'bg-gray-800';
+                                                        else if (day.status === 'Absent') colorClass = 'bg-red-500/20 border border-red-500/50';
+
+                                                        return (
+                                                            <td key={day.day} className="p-1 text-center group relative">
+                                                                <div className={`w-3 h-3 mx-auto rounded-full ${colorClass}`} />
+                                                                {/* Tooltip */}
+                                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-black text-white text-xs p-2 rounded z-20 whitespace-nowrap border border-gray-700">
+                                                                    {day.date}: {day.status}
+                                                                </div>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className="text-center text-xs text-gray-500">
+                                                        <span className="text-green-400 font-bold">{emp.stats.present}</span> / <span className="text-red-400">{emp.stats.absent}</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Legend */}
+                            <div className="flex gap-4 mt-4 text-xs text-gray-500 justify-end">
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div> Present</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Leave</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div> Absent</div>
+                                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-gray-800"></div> Weekend</div>
+                            </div>
+                        </div>
                     )}
                 </>
             )}

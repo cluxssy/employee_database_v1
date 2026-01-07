@@ -43,9 +43,21 @@ def get_dashboard_stats():
         hiring_trend_df = hiring_trend_df.sort_values('Year')
         hiring_trend = hiring_trend_df.to_dict('records') # [{'Year': 2023, 'Hires': 5}, ...]
 
-        # 5. Asset Inventory
-        # 1 = Returned, 0 or NULL = Assigned
-        asset_counts = df_assets['laptop_returned'].apply(lambda x: "Returned" if x == 1 else "Assigned").value_counts().reset_index()
+        # 5. Asset Inventory (Using new checklist columns)
+        # Category: "Returned" if cl_laptop is 1. "Assigned" if ob_laptop is 1 and cl_laptop is 0.
+        # "Unassigned" otherwise (or just ignore for this chart).
+        
+        def get_asset_status(row):
+            if row.get('cl_laptop', 0) == 1:
+                return "Returned"
+            elif row.get('ob_laptop', 0) == 1:
+                return "Assigned"
+            else:
+                return "None"
+
+        df_assets['status'] = df_assets.apply(get_asset_status, axis=1)
+        # Filter out 'None' so the chart only shows relevant data
+        asset_counts = df_assets[df_assets['status'] != 'None']['status'].value_counts().reset_index()
         asset_counts.columns = ['name', 'value']
         asset_distribution = asset_counts.to_dict('records')
 
@@ -163,11 +175,17 @@ def get_employee_dashboard_stats(current_user: dict = Depends(get_current_user))
             FROM hr_activity
             WHERE employee_code = ?
         """, (employee_code,)).fetchone()
-        # Fallback to hr_activity if training_assignments is unused, but schema has both. 
-        # init_db.py shows training_assignments table. Let's try that first.
         
-        # 4. Assets
-        assets = conn.execute("SELECT count(*) as total FROM assets WHERE employee_code = ?", (employee_code,)).fetchone()
+        # 4. Assets (Summing checklist items)
+        # Note: We only count physical assets for the dashboard stat, not admin checks like email/groups
+        asset_row = conn.execute("""
+            SELECT 
+                ob_laptop + ob_laptop_bag + ob_headphones + ob_mouse + ob_extra_hardware + ob_client_assets as total_assigned
+            FROM assets 
+            WHERE employee_code = ?
+        """, (employee_code,)).fetchone()
+        
+        asset_count = asset_row['total_assigned'] if asset_row and asset_row['total_assigned'] else 0
         
         # 5. Notifications
         notifications = conn.execute("""
@@ -194,7 +212,7 @@ def get_employee_dashboard_stats(current_user: dict = Depends(get_current_user))
                 "completed": trainings["completed"] if trainings and trainings["completed"] else 0
             },
             "assets": {
-                "total": assets["total"] if assets else 0
+                "total": asset_count
             },
             "notifications": [dict(n) for n in notifications]
         }

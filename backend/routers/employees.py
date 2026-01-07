@@ -228,7 +228,16 @@ async def create_employee(
             experience_years, cv_path
         ))
         
-        # Note: Assets, Performance, HR Activity are intentionally omitted as per new requirements.
+        # 3. Initialize Assets Checklist (Syncing PF/Mediclaim from Onboarding)
+        # Convert "Yes"/"No" or "true"/"false" string to 1/0
+        ob_pf_val = 1 if pf and str(pf).lower() in ['yes', 'true', '1', 'on'] else 0
+        ob_med_val = 1 if mediclaim and str(mediclaim).lower() in ['yes', 'true', '1', 'on'] else 0
+        
+        c.execute('''
+            INSERT INTO assets (
+                employee_code, ob_pf, ob_mediclaim
+            ) VALUES (?, ?, ?)
+        ''', (code, ob_pf_val, ob_med_val))
         
         conn.commit()
         return {"success": True, "message": "Employee added successfully!"}
@@ -254,8 +263,6 @@ def update_employee(employee_code: str, data: dict = Body(...)):
         
         # Whitelist allowed fields for update to prevent accidental overwrite of critical data
         allowed_fields = [
-            'checklist_bag', 'checklist_mediclaim', 'checklist_pf', 
-            'checklist_email_access', 'checklist_groups', 'checklist_relieving_letter',
             'exit_date', 'exit_reason', 'clearance_status', 'employment_status',
             'name', 'designation', 'team',
             'contact_number', 'emergency_contact', 'current_address', 
@@ -339,6 +346,77 @@ def delete_employee(employee_code: str):
         
     except HTTPException:
         raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@router.get("/options", dependencies=[Depends(require_role(["Admin", "HR", "Management", "Employee"]))])
+def get_dropdown_options():
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        # Get Teams
+        c.execute("SELECT DISTINCT team FROM employees WHERE team IS NOT NULL AND team != '' ORDER BY team")
+        teams = [row[0] for row in c.fetchall()]
+
+        # Get Designations
+        c.execute("SELECT DISTINCT designation FROM employees WHERE designation IS NOT NULL AND designation != '' ORDER BY designation")
+        designations = [row[0] for row in c.fetchall()]
+
+        # Get Managers (People who are listed as role='Management' or are distinct in reporting_manager column? 
+        # Better to get actual people with Management role or just unique reporting_manager values)
+        # Strategy: Get list of employees who CAN be managers (e.g. users table role='Management' or 'Admin')
+        # OR just get unique reporting_manager strings for now if that's what's stored.
+        # User requested "managers", usually implies valid people to select.
+        c.execute("""
+            SELECT e.name, u.employee_code 
+            FROM employees e
+            JOIN users u ON e.employee_code = u.employee_code
+            WHERE u.role IN ('Management', 'Admin')
+            ORDER BY e.name
+        """)
+        managers = [{"name": row[0], "code": row[1]} for row in c.fetchall()]
+
+        return {
+            "teams": teams,
+            "designations": designations,
+            "managers": managers
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@router.post("/employee/{employee_code}/offboard", dependencies=[Depends(require_role(["Admin", "HR"]))])
+def offboard_employee(employee_code: str, data: dict = Body(...)):
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        exit_date = data.get('exit_date', datetime.today().strftime('%Y-%m-%d'))
+        exit_reason = data.get('exit_reason', 'Resignation')
+        
+        # 1. Update Employee Status
+        c.execute("""
+            UPDATE employees 
+            SET employment_status = 'Exited', 
+                exit_date = ?, 
+                exit_reason = ?,
+                clearance_status = 'Pending'
+            WHERE employee_code = ?
+        """, (exit_date, exit_reason, employee_code))
+        
+        # 2. Deactivate User Account
+        c.execute("""
+            UPDATE users 
+            SET is_active = 0 
+            WHERE employee_code = ?
+        """, (employee_code,))
+        
+        conn.commit()
+        return {"success": True, "message": f"Employee {employee_code} successfully offboarded."}
+
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))

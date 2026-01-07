@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Request, Form
 from typing import List, Optional
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel
 from backend.database import get_db_connection
 from backend.routers.auth import get_current_user
@@ -283,5 +283,126 @@ def approve_reject_leave(leave_id: int, action: str = Form(...), reason: str = F
 
         conn.commit()
         return {"success": True, "message": f"Leave has been {action}"}
+    finally:
+        conn.close()
+@router.get("/admin/summary")
+def get_monthly_attendance_summary(year: int, month: int, user=Depends(get_current_user)):
+    if user['role'] not in ['Admin', 'HR', 'Management']:
+         raise HTTPException(status_code=403, detail="Not authorized")
+    
+    import calendar
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    try:
+        # 1. Get all employees
+        c.execute("SELECT name, employee_code FROM employees WHERE employment_status = 'Active' ORDER BY name")
+        employees = c.fetchall()
+        
+        # 2. Date Range
+        num_days = calendar.monthrange(year, month)[1]
+        start_date = f"{year}-{month:02d}-01"
+        end_date = f"{year}-{month:02d}-{num_days}"
+        
+        # 3. Fetch Attendance
+        c.execute("""
+            SELECT employee_code, date, status 
+            FROM attendance 
+            WHERE date BETWEEN ? AND ?
+        """, (start_date, end_date))
+        attendance_rows = c.fetchall()
+        
+        # Map: code -> date -> status
+        att_map = {}
+        for row in attendance_rows:
+            if row['employee_code'] not in att_map:
+                att_map[row['employee_code']] = {}
+            att_map[row['employee_code']][row['date']] = 'Present' # Simplified, could be row['status']
+
+        # 4. Fetch Leaves (Approved only)
+        c.execute("""
+            SELECT employee_code, start_date, end_date, leave_type
+            FROM leaves 
+            WHERE status = 'Approved' 
+            AND (
+                (start_date BETWEEN ? AND ?) OR 
+                (end_date BETWEEN ? AND ?)
+            )
+        """, (start_date, end_date, start_date, end_date))
+        leave_rows = c.fetchall()
+        
+        # Map: code -> date -> leave_type
+        leave_map = {}
+        for row in leave_rows:
+            code = row['employee_code']
+            if code not in leave_map: leave_map[code] = {}
+            
+            # Expand date range
+            try:
+                d1 = datetime.strptime(row['start_date'], '%Y-%m-%d')
+                d2 = datetime.strptime(row['end_date'], '%Y-%m-%d')
+                
+                # Clamp to current month
+                month_start = datetime(year, month, 1)
+                month_end = datetime(year, month, num_days)
+                
+                curr = max(d1, month_start)
+                end = min(d2, month_end)
+                
+                while curr <= end:
+                    d_str = curr.strftime('%Y-%m-%d')
+                    leave_map[code][d_str] = 'Leave'
+                    curr += timedelta(days=1)
+            except:
+                pass
+
+        # 5. Build Summary
+        summary = []
+        for emp in employees:
+            code = emp['employee_code']
+            days = []
+            
+            present_count = 0
+            leave_count = 0
+            absent_count = 0
+            
+            for day in range(1, num_days + 1):
+                date_str = f"{year}-{month:02d}-{day:02d}"
+                status = 'Absent'
+                
+                # Check Attendance
+                if code in att_map and date_str in att_map[code]:
+                    status = 'Present'
+                    present_count += 1
+                # Check Leave
+                elif code in leave_map and date_str in leave_map[code]:
+                    status = 'Leave'
+                    leave_count += 1
+                # Check Weekend (Simple)
+                else:
+                    try:
+                        dt = datetime(year, month, day)
+                        if dt.weekday() >= 5: # 5=Sat, 6=Sun
+                            status = 'Weekend'
+                        else:
+                            absent_count += 1
+                    except:
+                        pass
+                
+                days.append({"day": day, "status": status, "date": date_str})
+
+            summary.append({
+                "name": emp['name'],
+                "code": code,
+                "days": days,
+                "stats": {
+                    "present": present_count,
+                    "leave": leave_count,
+                    "absent": absent_count
+                }
+            })
+            
+        return summary
+        
     finally:
         conn.close()

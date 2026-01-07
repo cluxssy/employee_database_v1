@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Monitor, Save, Search, CheckCircle, XCircle, Trash2, Calendar } from 'lucide-react';
+import { ArrowLeft, Search, CheckCircle, Save, AlertCircle } from 'lucide-react';
 import StaggeredMenu from '../../components/navBar';
 import Waves from '../../components/Background/Waves';
 import { useAuth } from '../../context/AuthContext';
@@ -14,26 +14,46 @@ interface Employee {
     designation?: string;
 }
 
-interface Asset {
-    id: number;
-    employee_code: string;
-    asset_id: string;
-    issued_to: string;
-    issue_date: string;
-    return_date?: string;
-    laptop_returned?: number; // 0 or 1
+interface AssetChecklist {
+    // Onboarding
+    ob_laptop: number;
+    ob_laptop_bag: number;
+    ob_headphones: number;
+    ob_mouse: number;
+    ob_extra_hardware: number;
+    ob_client_assets: number;
+
+    ob_id_card: number;
+    ob_email_access: number;
+    ob_groups: number;
+    ob_mediclaim: number;
+    ob_pf: number;
+
+    ob_remarks: string;
+
+    // Clearance
+    cl_laptop: number;
+    cl_laptop_bag: number;
+    cl_headphones: number;
+    cl_mouse: number;
+    cl_extra_hardware: number;
+    cl_client_assets: number;
+
+    cl_id_card: number;
+    cl_email_access: number;
+    cl_groups: number;
+    cl_relieving_letter: number;
+
+    cl_remarks: string;
 }
 
-interface EmployeeDetails extends Employee {
-    checklist_bag?: number;
-    checklist_mediclaim?: number;
-    checklist_pf?: number;
-    checklist_email_access?: number;
-    checklist_groups?: number;
-    checklist_relieving_letter?: number;
-}
+const DEFAULT_CHECKLIST: AssetChecklist = {
+    ob_laptop: 0, ob_laptop_bag: 0, ob_headphones: 0, ob_mouse: 0, ob_extra_hardware: 0, ob_client_assets: 0,
+    ob_id_card: 0, ob_email_access: 0, ob_groups: 0, ob_mediclaim: 0, ob_pf: 0, ob_remarks: '',
 
-
+    cl_laptop: 0, cl_laptop_bag: 0, cl_headphones: 0, cl_mouse: 0, cl_extra_hardware: 0, cl_client_assets: 0,
+    cl_id_card: 0, cl_email_access: 0, cl_groups: 0, cl_relieving_letter: 0, cl_remarks: ''
+};
 
 export default function ManageAssets() {
     const router = useRouter();
@@ -49,23 +69,18 @@ export default function ManageAssets() {
         }
     }, [authLoading, isAuthorized, user, router]);
 
-
-
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-    const [employeeDetails, setEmployeeDetails] = useState<EmployeeDetails | null>(null);
-    const [assets, setAssets] = useState<Asset[]>([]);
+    const [checklist, setChecklist] = useState<AssetChecklist>(DEFAULT_CHECKLIST);
     const [loading, setLoading] = useState(false);
-
-    // Search State
+    const [saving, setSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-
-    // Form State
-    const [newAsset, setNewAsset] = useState({ asset_id: '', issue_date: '' });
 
     const menuItems = getMenuItems(user?.role);
 
-
+    useEffect(() => {
+        fetchEmployees();
+    }, []);
 
     const fetchEmployees = async () => {
         try {
@@ -79,23 +94,20 @@ export default function ManageAssets() {
         }
     };
 
-
-
-    useEffect(() => {
-        fetchEmployees();
-    }, []);
-
-    const fetchEmployeeData = async (code: string) => {
+    const fetchChecklist = async (code: string) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/employee/${code}`, { credentials: 'include' });
+            const res = await fetch(`http://localhost:8000/api/assets/${code}`, { credentials: 'include' });
             if (res.ok) {
                 const data = await res.json();
-                setEmployeeDetails(data);
-                setAssets(data.assets || []);
+                // Merge with default to ensure all fields exist
+                setChecklist({ ...DEFAULT_CHECKLIST, ...data });
+            } else {
+                setChecklist(DEFAULT_CHECKLIST);
             }
         } catch (err) {
             console.error(err);
+            setChecklist(DEFAULT_CHECKLIST);
         } finally {
             setLoading(false);
         }
@@ -104,75 +116,34 @@ export default function ManageAssets() {
     const handleSelectEmployee = (emp: Employee) => {
         setSelectedEmployee(emp);
         setSearchTerm(emp.name);
-        fetchEmployeeData(emp.employee_code);
+        fetchChecklist(emp.employee_code);
     };
 
-    const handleAddAsset = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSave = async () => {
         if (!selectedEmployee) return;
-
+        setSaving(true);
         try {
-            const res = await fetch('http://localhost:8000/api/assets/', {
+            const res = await fetch(`http://localhost:8000/api/assets/${selectedEmployee.employee_code}`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    employee_code: selectedEmployee.employee_code,
-                    asset_id: newAsset.asset_id,
-                    issued_to: selectedEmployee.name,
-                    issue_date: newAsset.issue_date
-                })
+                body: JSON.stringify(checklist)
             });
-
             if (res.ok) {
-                setNewAsset({ asset_id: '', issue_date: '' }); // Reset form
-                if (selectedEmployee) fetchEmployeeData(selectedEmployee.employee_code); // Refresh list
+                alert('Checklists saved successfully');
             } else {
-                alert('Failed to add asset');
+                alert('Failed to save checklists');
             }
         } catch (err) {
             console.error(err);
+            alert('Error saving checklists');
+        } finally {
+            setSaving(false);
         }
     };
 
-    const handleUpdateAsset = async (asset: Asset, updates: any) => {
-        try {
-            const res = await fetch(`http://localhost:8000/api/assets/${asset.id}`, {
-                method: 'PUT',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...asset,
-                    ...updates
-                })
-            });
-            if (res.ok) {
-                if (selectedEmployee) fetchEmployeeData(selectedEmployee.employee_code);
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handleDeleteAsset = async (assetId: number) => {
-        if (!confirm('Are you sure you want to delete this asset? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            const res = await fetch(`http://localhost:8000/api/assets/${assetId}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            if (res.ok) {
-                if (selectedEmployee) fetchEmployeeData(selectedEmployee.employee_code);
-            } else {
-                alert('Failed to delete asset');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error deleting asset');
-        }
+    const updateField = (field: keyof AssetChecklist, value: any) => {
+        setChecklist(prev => ({ ...prev, [field]: value }));
     };
 
     // Filter employees for autocomplete
@@ -190,9 +161,6 @@ export default function ManageAssets() {
                 isFixed={true}
                 items={menuItems}
                 displayItemNumbering={true}
-                menuButtonColor="#fff"
-                openMenuButtonColor="#fff"
-                changeMenuColorOnOpen={true}
                 colors={['#B19EEF', '#5227FF']}
                 logoUrl="/logo.png"
                 accentColor="var(--color-brand-purple)"
@@ -215,10 +183,8 @@ export default function ManageAssets() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                    {/* Left Column: Selection & Issue */}
+                    {/* Left Column: Selection */}
                     <div className="lg:col-span-4 space-y-6">
-
-                        {/* 1. Employee Search */}
                         <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-6 relative">
                             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
                                 <Search size={18} className="text-brand-purple" /> Find Employee
@@ -250,188 +216,147 @@ export default function ManageAssets() {
                             )}
                         </div>
 
-                        {/* 2. Issue New Asset Form */}
                         {selectedEmployee && (
-                            <form onSubmit={handleAddAsset} className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-6 animate-fade-in-up">
-                                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                                    <Monitor size={18} className="text-brand-purple" /> Issue New Asset
-                                </h2>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="text-xs text-gray-500 uppercase">Employee</label>
-                                        <p className="text-gray-300 font-mono">{selectedEmployee.name} ({selectedEmployee.employee_code})</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-500 uppercase">Asset ID (Tag)</label>
-                                        <input
-                                            type="text"
-                                            value={newAsset.asset_id}
-                                            onChange={e => setNewAsset({ ...newAsset, asset_id: e.target.value })}
-                                            required
-                                            placeholder="e.g. LAP-2024-001"
-                                            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg p-3 mt-1 text-white focus:border-brand-purple outline-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-500 uppercase">Issue Date</label>
-                                        <input
-                                            type="date"
-                                            value={newAsset.issue_date}
-                                            onChange={e => setNewAsset({ ...newAsset, issue_date: e.target.value })}
-                                            required
-                                            className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg p-3 mt-1 text-white focus:border-brand-purple outline-none"
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        className="w-full py-3 rounded-xl bg-brand-purple text-white font-bold hover:bg-opacity-90 transition shadow-lg shadow-brand-purple/20"
-                                    >
-                                        Assign Asset
-                                    </button>
+                            <div className="animate-fade-in-up">
+                                <div className="bg-[#111]/80 border border-[#222] rounded-3xl p-6 mb-4">
+                                    <h3 className="text-lg font-bold text-white mb-2">{selectedEmployee.name}</h3>
+                                    <span className="text-sm bg-brand-purple/20 text-brand-purple px-3 py-1 rounded-full">
+                                        {selectedEmployee.designation}
+                                    </span>
                                 </div>
-                            </form>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="w-full py-4 rounded-xl bg-brand-purple text-white font-bold hover:bg-opacity-90 transition shadow-lg shadow-brand-purple/20 flex items-center justify-center gap-2"
+                                >
+                                    {saving ? 'Saving...' : (
+                                        <>
+                                            <Save size={20} /> Save Changes
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         )}
                     </div>
 
-                    {/* Right Column: Asset List & Management */}
+                    {/* Right Column: Checklists */}
                     <div className="lg:col-span-8">
                         {selectedEmployee ? (
-                            <div className="space-y-6">
-                                {/* Master Checklist Section */}
-                                <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-6 animate-fade-in-up">
-                                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                        <CheckCircle size={20} className="text-green-500" /> Master Clearance Checklist
-                                    </h2>
-                                    {employeeDetails && (
-                                        <MasterChecklist
-                                            details={employeeDetails}
-                                            onUpdate={async (updates) => {
-                                                const res = await fetch(`http://localhost:8000/api/employee/${employeeDetails.employee_code}`, {
-                                                    method: 'PUT',
-                                                    credentials: 'include',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify(updates)
-                                                });
-                                                if (res.ok) fetchEmployeeData(employeeDetails.employee_code);
-                                            }}
-                                        />
-                                    )}
-                                </div>
+                            loading ? (
+                                <div className="text-center py-20 text-gray-500">Loading checklists...</div>
+                            ) : (
+                                <div className="space-y-8 animate-fade-in-up">
 
-                                <h2 className="text-xl font-bold flex items-center gap-2 text-gray-300">
-                                    Assets for <span className="text-white">{selectedEmployee.name}</span>
-                                </h2>
+                                    {/* Onboarding Checklist */}
+                                    <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
+                                        <h2 className="text-2xl font-bold mb-6 text-green-400 flex items-center gap-3">
+                                            <CheckCircle className="fill-green-900/30 text-green-500" /> Onboarding Checklist
+                                        </h2>
 
-                                {loading && <p>Loading assets...</p>}
+                                        <div className="mb-6">
+                                            <h3 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">IT & Hardware</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <ChecklistItem label="Laptop" checked={!!checklist.ob_laptop} onChange={(v) => updateField('ob_laptop', v ? 1 : 0)} />
+                                                <ChecklistItem label="Laptop Bag" checked={!!checklist.ob_laptop_bag} onChange={(v) => updateField('ob_laptop_bag', v ? 1 : 0)} />
+                                                <ChecklistItem label="Headphones" checked={!!checklist.ob_headphones} onChange={(v) => updateField('ob_headphones', v ? 1 : 0)} />
+                                                <ChecklistItem label="Mouse" checked={!!checklist.ob_mouse} onChange={(v) => updateField('ob_mouse', v ? 1 : 0)} />
+                                                <ChecklistItem label="Any extra hardware" checked={!!checklist.ob_extra_hardware} onChange={(v) => updateField('ob_extra_hardware', v ? 1 : 0)} />
+                                                <ChecklistItem label="Client provided assets" checked={!!checklist.ob_client_assets} onChange={(v) => updateField('ob_client_assets', v ? 1 : 0)} />
+                                            </div>
+                                        </div>
 
-                                {!loading && assets.length === 0 && (
-                                    <div className="p-8 border border-dashed border-[#333] rounded-3xl text-center text-gray-500">
-                                        No assets assigned to this employee yet.
+                                        <div className="mb-6">
+                                            <h3 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">Admin & Access</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <ChecklistItem label="ID Card" checked={!!checklist.ob_id_card} onChange={(v) => updateField('ob_id_card', v ? 1 : 0)} />
+                                                <ChecklistItem label="Email Access" checked={!!checklist.ob_email_access} onChange={(v) => updateField('ob_email_access', v ? 1 : 0)} />
+                                                <ChecklistItem label="Added to Groups" checked={!!checklist.ob_groups} onChange={(v) => updateField('ob_groups', v ? 1 : 0)} />
+                                                <ChecklistItem label="Mediclaim Included" checked={!!checklist.ob_mediclaim} onChange={(v) => updateField('ob_mediclaim', v ? 1 : 0)} />
+                                                <ChecklistItem label="PF Included" checked={!!checklist.ob_pf} onChange={(v) => updateField('ob_pf', v ? 1 : 0)} />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Remarks</label>
+                                            <textarea
+                                                className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-gray-300 focus:border-green-500 outline-none transition-colors min-h-[100px]"
+                                                placeholder="Add remarks for onboarding..."
+                                                value={checklist.ob_remarks || ''}
+                                                onChange={(e) => updateField('ob_remarks', e.target.value)}
+                                            />
+                                        </div>
                                     </div>
-                                )}
 
-                                {assets.map(asset => (
-                                    <AssetCard
-                                        key={asset.id}
-                                        asset={asset}
-                                        onUpdate={(updates) => handleUpdateAsset(asset, updates)}
-                                        onDelete={() => handleDeleteAsset(asset.id)}
-                                    />
-                                ))}
-                            </div>
+                                    {/* Clearance Checklist */}
+                                    <div className="bg-[#111]/80 backdrop-blur-md border border-[#222] rounded-3xl p-8">
+                                        <h2 className="text-2xl font-bold mb-6 text-red-400 flex items-center gap-3">
+                                            <AlertCircle className="fill-red-900/30 text-red-500" /> Clearance Checklist
+                                        </h2>
+
+                                        <div className="mb-6">
+                                            <h3 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">Return Hardware</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <ChecklistItem label="Laptop" checked={!!checklist.cl_laptop} onChange={(v) => updateField('cl_laptop', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Laptop Bag" checked={!!checklist.cl_laptop_bag} onChange={(v) => updateField('cl_laptop_bag', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Headphones" checked={!!checklist.cl_headphones} onChange={(v) => updateField('cl_headphones', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Mouse" checked={!!checklist.cl_mouse} onChange={(v) => updateField('cl_mouse', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Any extra hardware" checked={!!checklist.cl_extra_hardware} onChange={(v) => updateField('cl_extra_hardware', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Client provided assets" checked={!!checklist.cl_client_assets} onChange={(v) => updateField('cl_client_assets', v ? 1 : 0)} variant="destructive" />
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-6">
+                                            <h3 className="text-sm font-bold text-gray-400 mb-3 uppercase tracking-wider">Revoke Access & Admin</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <ChecklistItem label="ID Card Returned" checked={!!checklist.cl_id_card} onChange={(v) => updateField('cl_id_card', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Email Access Revoked" checked={!!checklist.cl_email_access} onChange={(v) => updateField('cl_email_access', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Removed from Groups" checked={!!checklist.cl_groups} onChange={(v) => updateField('cl_groups', v ? 1 : 0)} variant="destructive" />
+                                                <ChecklistItem label="Relieving Letter Issued" checked={!!checklist.cl_relieving_letter} onChange={(v) => updateField('cl_relieving_letter', v ? 1 : 0)} variant="destructive" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Remarks</label>
+                                            <textarea
+                                                className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-gray-300 focus:border-red-500 outline-none transition-colors min-h-[100px]"
+                                                placeholder="Add remarks for clearance..."
+                                                value={checklist.cl_remarks || ''}
+                                                onChange={(e) => updateField('cl_remarks', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                </div>
+                            )
                         ) : (
                             <div className="h-full flex items-center justify-center text-gray-500 bg-[#111]/50 border border-[#222] rounded-3xl min-h-[400px]">
-                                Select an employee to view and manage their assets.
+                                Select an employee to view and manage their asset checklists.
                             </div>
                         )}
                     </div>
-
                 </div>
             </main>
         </div>
     );
 }
 
-// Sub-component for Asset Item
-function AssetCard({ asset, onUpdate, onDelete }: { asset: Asset, onUpdate: (data: any) => void, onDelete: () => void }) {
-    const isReturned = !!asset.return_date;
+function ChecklistItem({ label, checked, onChange, variant = 'default' }: { label: string, checked: boolean, onChange: (val: boolean) => void, variant?: 'default' | 'destructive' }) {
+    const activeColor = variant === 'destructive' ? 'bg-red-500 border-red-500' : 'bg-green-500 border-green-500';
+    const activeText = variant === 'destructive' ? 'text-white' : 'text-black';
 
     return (
-        <div className={`bg-[#1a1a1a] border ${isReturned ? 'border-green-900/50' : 'border-[#333]'} rounded-2xl p-6 transition-all`}>
-            <div className="flex justify-between items-start mb-6">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xl font-bold text-white tracking-wide">{asset.asset_id}</span>
-                        {isReturned && <span className="text-xs bg-green-900/30 text-green-400 px-2 py-1 rounded border border-green-900">RETURNED</span>}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">Issued: {asset.issue_date}</p>
-                </div>
-
-                {/* Return Date Input */}
-                <div className="flex flex-col items-end gap-2">
-                    <label className="text-xs text-gray-500 uppercase">Return Date</label>
-                    <input
-                        type="date"
-                        value={asset.return_date || ''}
-                        onChange={(e) => onUpdate({ return_date: e.target.value })}
-                        className="bg-[#111] border border-[#333] text-gray-300 text-xs rounded px-2 py-1 focus:border-brand-purple outline-none"
-                    />
-                </div>
+        <div
+            onClick={() => onChange(!checked)}
+            className={`cursor-pointer group flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${checked
+                ? `${activeColor} ${activeText} shadow-lg shadow-${variant === 'destructive' ? 'red' : 'green'}-500/20`
+                : 'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-gray-500'
+                }`}
+        >
+            <span className="font-medium">{label}</span>
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${checked ? 'border-white bg-white/20' : 'border-gray-600 group-hover:border-gray-400'
+                }`}>
+                {checked && <div className="w-2.5 h-2.5 rounded-full bg-current" />}
             </div>
-
-            {/* Delete Button */}
-            <div className="flex justify-end pt-4 border-t border-[#222]">
-                <button
-                    onClick={onDelete}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 border border-red-900/50 rounded-lg transition-colors text-sm font-medium"
-                >
-                    <Trash2 size={16} />
-                    Delete Asset
-                </button>
-            </div>
-
-        </div>
-    );
-}
-
-function MasterChecklist({ details, onUpdate }: { details: EmployeeDetails, onUpdate: (u: any) => void }) {
-
-    const renderToggle = (label: string, field: keyof EmployeeDetails, checkedText: string, uncheckedText: string, checkedClass: string, uncheckedClass: string) => {
-        const isChecked = !!details[field];
-        return (
-            <div className="bg-[#1a1a1a] rounded-xl p-4 border border-[#333] flex flex-col gap-2">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">{label}</span>
-                <button
-                    onClick={() => onUpdate({ [field]: isChecked ? 0 : 1 })}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-bold border transition-all ${isChecked ? checkedClass : uncheckedClass
-                        }`}
-                >
-                    {isChecked ? checkedText : uncheckedText}
-                    <div className={`w-2 h-2 rounded-full ${isChecked ? 'bg-current shadow-[0_0_8px_currentColor]' : 'bg-current'}`} />
-                </button>
-            </div>
-        );
-    };
-
-    // Styles
-    const redStyle = "bg-red-900/20 text-red-500 border-red-900/50 hover:bg-red-900/30";
-    const greenStyle = "bg-green-900/20 text-green-500 border-green-900/50 hover:bg-green-900/30";
-
-    return (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Standard Logic: Checked(1)=Yes(Green), Unchecked(0)=No(Red) */}
-
-            {/* Bag */}
-            {renderToggle('Bag', 'checklist_bag', 'Yes', 'No', greenStyle, redStyle)}
-
-            {/* Email Access */}
-            {renderToggle('Email Access', 'checklist_email_access', 'Yes', 'No', greenStyle, redStyle)}
-
-            {/* Groups */}
-            {renderToggle('Groups', 'checklist_groups', 'Yes', 'No', greenStyle, redStyle)}
-
-            {/* Relieving Letter */}
-            {renderToggle('Relieving Letter', 'checklist_relieving_letter', 'Yes', 'No', greenStyle, redStyle)}
         </div>
     );
 }
