@@ -38,8 +38,6 @@ def create_tables():
             current_address TEXT,
             permanent_address TEXT,
             education_details TEXT,
-            education_details TEXT,
-            -- Moved checklists to 'assets' table
             employment_status TEXT DEFAULT 'Active',
             photo_path TEXT,
             cv_path TEXT,
