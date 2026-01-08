@@ -1,76 +1,34 @@
-from fastapi import APIRouter, HTTPException, Body, Depends
+from typing import Dict, Any, Optional
 from backend.database import get_db_connection
-from backend.routers.auth import require_role
-import sqlite3
 
-router = APIRouter(
-    prefix="/api/assets",
-    tags=["assets"],
-    dependencies=[Depends(require_role(["Admin", "HR"]))]
-)
+class AssetRepository:
+    def get_asset_checklist(self, employee_code: str) -> Optional[Dict[str, Any]]:
+        conn = get_db_connection()
+        try:
+             row = conn.execute("SELECT * FROM assets WHERE employee_code = ?", (employee_code,)).fetchone()
+             return dict(row) if row else None
+        finally:
+            conn.close()
 
-@router.get("/{employee_code}")
-def get_asset_checklist(employee_code: str):
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        # 1. Fetch Asset Record
-        c.execute("SELECT * FROM assets WHERE employee_code = ?", (employee_code,))
-        asset_row = c.fetchone()
-        
-        # 2. Fetch Employee Record (for fallback/sync)
-        c.execute("SELECT pf_included, mediclaim_included FROM employees WHERE employee_code = ?", (employee_code,))
-        emp_row = c.fetchone()
-        
-        result = {}
-        
-        if asset_row:
-            result = dict(asset_row)
-            
-            # Optional: If values are 0 in assets but 'Yes' in employees, we could sync them here?
-            # For now, let's trust the assets table if it exists, assuming it's the source of truth for the checklist.
-            # However, if it was just created empty, we might want to fill gaps.
-            pass
-        else:
-            # Asset row doesn't exist yet, create default state based on Employee table
-            ob_pf = 0
-            ob_mediclaim = 0
-            
-            if emp_row:
-                pf = emp_row['pf_included']
-                med = emp_row['mediclaim_included']
-                
-                if pf and str(pf).lower() in ['yes', 'true', '1', 'on']:
-                    ob_pf = 1
-                
-                if med and str(med).lower() in ['yes', 'true', '1', 'on']:
-                    ob_mediclaim = 1
-            
-            result = {
-                "employee_code": employee_code,
-                "ob_pf": ob_pf,
-                "ob_mediclaim": ob_mediclaim
-            }
-            
-        return result
+    def get_employee_defaults(self, employee_code: str) -> Optional[Dict[str, Any]]:
+        conn = get_db_connection()
+        try:
+            row = conn.execute("SELECT pf_included, mediclaim_included FROM employees WHERE employee_code = ?", (employee_code,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        conn.close()
+    def check_exists(self, employee_code: str) -> bool:
+        conn = get_db_connection()
+        try:
+            return conn.execute("SELECT 1 FROM assets WHERE employee_code = ?", (employee_code,)).fetchone() is not None
+        finally:
+            conn.close()
 
-@router.post("/{employee_code}")
-def upsert_asset_checklist(employee_code: str, data: dict = Body(...)):
-    conn = get_db_connection()
-    c = conn.cursor()
-    try:
-        # Check if exists
-        c.execute("SELECT 1 FROM assets WHERE employee_code = ?", (employee_code,))
-        exists = c.fetchone()
-
-        if exists:
-            # Update
-            c.execute('''
+    def update_asset_checklist(self, employee_code: str, data: Dict[str, Any]):
+        conn = get_db_connection()
+        try:
+            conn.execute('''
                 UPDATE assets SET 
                     ob_laptop=?, ob_laptop_bag=?, ob_headphones=?, ob_mouse=?, 
                     ob_extra_hardware=?, ob_client_assets=?, 
@@ -107,9 +65,14 @@ def upsert_asset_checklist(employee_code: str, data: dict = Body(...)):
                 
                 employee_code
             ))
-        else:
-            # Insert
-            c.execute('''
+            conn.commit()
+        finally:
+            conn.close()
+
+    def create_asset_checklist(self, employee_code: str, data: Dict[str, Any]):
+        conn = get_db_connection()
+        try:
+            conn.execute('''
                 INSERT INTO assets (
                     employee_code, 
                     ob_laptop, ob_laptop_bag, ob_headphones, ob_mouse, 
@@ -124,7 +87,6 @@ def upsert_asset_checklist(employee_code: str, data: dict = Body(...)):
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 employee_code,
-                # Onboarding
                 data.get('ob_laptop', 0), data.get('ob_laptop_bag', 0), 
                 data.get('ob_headphones', 0), data.get('ob_mouse', 0),
                 data.get('ob_extra_hardware', 0), data.get('ob_client_assets', 0), 
@@ -134,7 +96,6 @@ def upsert_asset_checklist(employee_code: str, data: dict = Body(...)):
                 
                 data.get('ob_remarks', ''),
                 
-                # Clearance
                 data.get('cl_laptop', 0), data.get('cl_laptop_bag', 0), 
                 data.get('cl_headphones', 0), data.get('cl_mouse', 0),
                 data.get('cl_extra_hardware', 0), data.get('cl_client_assets', 0), 
@@ -144,12 +105,6 @@ def upsert_asset_checklist(employee_code: str, data: dict = Body(...)):
                 
                 data.get('cl_remarks', '')
             ))
-            
-        conn.commit()
-        return {"success": True, "message": "Checklist updated successfully"}
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        conn.close()
-
+            conn.commit()
+        finally:
+            conn.close()
