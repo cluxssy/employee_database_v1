@@ -107,7 +107,7 @@ export default function EmployeeProfile() {
     const { user, isLoading: authLoading } = useAuth();
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'assets' | 'performance'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'allocations' | 'performance'>('overview');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showOffboardModal, setShowOffboardModal] = useState(false);
 
@@ -463,7 +463,7 @@ export default function EmployeeProfile() {
                     <div className="lg:col-span-2">
                         {/* Custom Tab Switcher */}
                         <div className="flex gap-2 mb-6 bg-[#111]/60 p-1.5 rounded-2xl w-fit border border-[#222]">
-                            {['overview', 'performance', 'assets'].map((tab) => (
+                            {['overview', 'performance', 'allocations'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab as any)}
@@ -532,9 +532,18 @@ export default function EmployeeProfile() {
                                     {/* About / Notes */}
                                     <div className="bg-[#111]/60 border border-[#222] rounded-3xl p-8">
                                         <h3 className="text-xl font-bold mb-4">Additional Notes</h3>
-                                        <p className="text-gray-400 leading-relaxed">
-                                            {employee.notes || "No additional notes available for this employee."}
-                                        </p>
+                                        {isEditing ? (
+                                            <textarea
+                                                value={editForm.notes || ''}
+                                                onChange={(e) => handleEditChange('notes', e.target.value)}
+                                                className="w-full bg-[#1a1a1a] border border-[#333] rounded-lg px-3 py-2 text-sm text-white focus:border-brand-purple outline-none h-32 resize-none"
+                                                placeholder="Add notes about the employee..."
+                                            />
+                                        ) : (
+                                            <p className="text-gray-400 leading-relaxed">
+                                                {employee.notes || "No additional notes available for this employee."}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -569,34 +578,64 @@ export default function EmployeeProfile() {
                                 </div>
                             )}
 
-                            {activeTab === 'assets' && (
+                            {activeTab === 'allocations' && (
                                 <div className="space-y-6">
                                     <div className="bg-[#111]/60 border border-[#222] rounded-3xl p-8">
                                         <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                            <Monitor className="text-brand-purple" /> Devices
+                                            <Monitor className="text-brand-purple" /> Allocations
                                         </h3>
-                                        {employee.assets && employee.assets.length > 0 ? (
-                                            <div className="grid gap-4">
-                                                {employee.assets.map((asset: any, i: number) => (
-                                                    <div key={i} className="flex items-center justify-between bg-[#1a1a1a] p-4 rounded-xl border border-[#333]">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 rounded-lg bg-[#222] flex items-center justify-center text-gray-400">
-                                                                <Monitor size={20} />
+                                        {(() => {
+                                            const assetData = (employee.assets?.[0] || {}) as any;
+                                            const allocationItems = [
+                                                { key: 'ob_laptop', label: 'Laptop', icon: Monitor },
+                                                { key: 'ob_laptop_bag', label: 'Laptop Bag', icon: Briefcase },
+                                                { key: 'ob_mouse', label: 'Mouse', icon: Monitor },
+                                                { key: 'ob_headphones', label: 'Headphones', icon: Monitor },
+                                                { key: 'ob_id_card', label: 'ID Card', icon: User },
+                                                { key: 'ob_email_access', label: 'Email Access', icon: Mail },
+                                                { key: 'ob_groups', label: 'Team Groups', icon: User },
+                                                { key: 'ob_mediclaim', label: 'Mediclaim', icon: TrendingUp },
+                                                { key: 'ob_pf', label: 'Provident Fund', icon: TrendingUp },
+                                            ];
+
+                                            // Check for 1 (int) or '1' (string) or true
+                                            const activeAllocations = allocationItems.filter(item => {
+                                                let val = assetData[item.key];
+
+                                                // Fallback: Check root employee record for PF/Mediclaim if missing in assets
+                                                if (item.key === 'ob_pf' && !val) {
+                                                    const pf = employee.pf_included ? String(employee.pf_included).toLowerCase() : '';
+                                                    if (['yes', 'true', '1'].includes(pf)) val = 1;
+                                                }
+                                                if (item.key === 'ob_mediclaim' && !val) {
+                                                    const med = employee.mediclaim_included ? String(employee.mediclaim_included).toLowerCase() : '';
+                                                    if (['yes', 'true', '1'].includes(med)) val = 1;
+                                                }
+
+                                                return val === 1 || val === '1' || val === true;
+                                            });
+
+                                            return activeAllocations.length > 0 ? (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {activeAllocations.map((item) => (
+                                                        <div key={item.key} className="flex items-center gap-4 bg-[#1a1a1a] p-4 rounded-xl border border-[#333] hover:border-brand-purple/40 transition-colors animate-fade-in-up">
+                                                            <div className="w-10 h-10 rounded-lg bg-[#222] flex items-center justify-center text-brand-purple">
+                                                                <item.icon size={20} />
                                                             </div>
                                                             <div>
-                                                                <p className="font-bold text-white">{asset.asset_id}</p>
-                                                                <p className="text-xs text-gray-500">Issued: {asset.issue_date}</p>
+                                                                <p className="font-bold text-white line-clamp-1">{item.label}</p>
+                                                                <p className="text-xs text-green-500 font-medium">Allocated</p>
                                                             </div>
                                                         </div>
-                                                        <span className={`px-3 py-1 text-xs rounded-full border ${asset.laptop_returned ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-yellow-500/30 text-yellow-500 bg-yellow-500/10'}`}>
-                                                            {asset.laptop_returned ? 'Returned' : 'Assigned'}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-10 text-gray-500">No Assets Assigned</div>
-                                        )}
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center py-12 text-gray-500 gap-2">
+                                                    <Briefcase size={40} className="text-gray-700 mb-2" />
+                                                    <p>No allocations recorded for this employee.</p>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             )}

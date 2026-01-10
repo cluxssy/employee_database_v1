@@ -58,7 +58,7 @@ class EmployeeService:
             'exit_date', 'exit_reason', 'clearance_status', 'employment_status',
             'name', 'designation', 'team',
             'contact_number', 'emergency_contact', 'current_address', 
-            'permanent_address', 'dob', 'email_id', 'reporting_manager', 'location'
+            'permanent_address', 'dob', 'email_id', 'reporting_manager', 'location', 'notes'
         ]
         
         fields = []

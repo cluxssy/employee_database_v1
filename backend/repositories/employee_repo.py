@@ -183,11 +183,11 @@ class EmployeeRepository:
             teams = [r[0] for r in conn.execute("SELECT DISTINCT team FROM employees WHERE team IS NOT NULL AND team != '' ORDER BY team").fetchall()]
             designations = [r[0] for r in conn.execute("SELECT DISTINCT designation FROM employees WHERE designation IS NOT NULL AND designation != '' ORDER BY designation").fetchall()]
             
-            managers = [{"name": r[0], "code": r[1]} for r in conn.execute("""
-                SELECT e.name, u.employee_code 
+            managers = [{"name": r[0], "code": r[1], "role": r[2]} for r in conn.execute("""
+                SELECT e.name, u.employee_code, u.role
                 FROM employees e
                 JOIN users u ON e.employee_code = u.employee_code
-                WHERE u.role IN ('Management', 'Admin')
+                WHERE u.role IN ('Management', 'Admin', 'HR')
                 ORDER BY e.name
             """).fetchall()]
             

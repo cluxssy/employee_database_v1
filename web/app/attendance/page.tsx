@@ -132,7 +132,7 @@ export default function AttendancePage() {
         <div className="min-h-screen bg-brand-black text-white relative">
             <Waves lineColor="#230a46ff" backgroundColor="rgba(0,0,0,0.2)" className="fixed inset-0 pointer-events-none z-0" />
 
-            <StaggeredMenu items={menuItems} position="right" isFixed={true} />
+            <StaggeredMenu items={menuItems} position="right" isFixed={true} logoUrl="/logo.png" />
 
             <main className="mx-auto max-w-7xl p-6 pt-32 relative z-10 animate-fade-in-up">
                 <h1 className="text-4xl font-bold mb-2">Attendance & Leaves</h1>

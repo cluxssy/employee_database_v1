@@ -177,7 +177,7 @@ export default function ManageAssets() {
                         <ArrowLeft size={24} />
                     </button>
                     <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                        Asset Management
+                        Allocation Management
                     </h1>
                 </div>
 

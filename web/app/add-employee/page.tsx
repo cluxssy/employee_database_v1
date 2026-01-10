@@ -442,7 +442,7 @@ function ApprovalModal({ employee, onClose, onSuccess }: any) {
                 if (res.ok) {
                     const data = await res.json();
                     // Filter for Management/Admin roles
-                    const validManagers = data.filter((emp: any) => emp.role === 'Management' || emp.role === 'Admin');
+                    const validManagers = data.filter((emp: any) => ['Management', 'Admin', 'HR'].includes(emp.role));
                     setManagers(validManagers);
                 }
             } catch (error) {
@@ -504,34 +504,27 @@ function ApprovalModal({ employee, onClose, onSuccess }: any) {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs text-gray-500 uppercase tracking-wider">Reporting Manager</label>
+                        <div className="flex flex-col gap-2 relative">
+                            <label className="text-xs text-gray-500 uppercase tracking-wider flex items-center gap-1">Reporting Manager <User size={12} /></label>
                             <select
                                 value={form.reporting_manager}
                                 onChange={(e) => setForm({ ...form, reporting_manager: e.target.value })}
-                                className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+                                className="appearance-none w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 pr-10 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all cursor-pointer hover:border-gray-500"
                                 required
                             >
-                                <option value="">Select Manager</option>
+                                <option value="" className="text-gray-500">Select Reporting Manager</option>
                                 {managers.map(m => (
-                                    <option key={m.employee_code} value={m.name}>{m.name} ({m.employee_code})</option>
+                                    <option key={m.employee_code} value={m.name} className="py-2">
+                                        {m.name}  —  [{m.role}]
+                                    </option>
                                 ))}
                             </select>
+                            <div className="absolute right-3 top-[34px] pointer-events-none text-gray-500">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                            </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs text-gray-500 uppercase tracking-wider">Employment Type</label>
-                            <select
-                                value={form.employment_type}
-                                onChange={(e) => setForm({ ...form, employment_type: e.target.value })}
-                                className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
-                            >
-                                <option>Full Time</option>
-                                <option>Part Time</option>
-                                <option>Contractual</option>
-                                <option>Internship</option>
-                            </select>
-                        </div>
+                        <SelectField label="Employment Type" name="employment_type" value={form.employment_type} onChange={(e: any) => setForm({ ...form, employment_type: e.target.value })} options={['Full Time', 'Part Time', 'Contractual', 'Internship']} />
 
                         <SelectField label="PF Included?" name="pf" value={form.pf_included} onChange={(e: any) => setForm({ ...form, pf_included: e.target.value })} options={['Yes', 'No']} />
                         <SelectField label="Mediclaim Included?" name="mediclaim" value={form.mediclaim_included} onChange={(e: any) => setForm({ ...form, mediclaim_included: e.target.value })} options={['Yes', 'No']} />
@@ -550,8 +543,8 @@ function ApprovalModal({ employee, onClose, onSuccess }: any) {
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 
@@ -559,7 +552,7 @@ function ApprovalModal({ employee, onClose, onSuccess }: any) {
 function ManualEntryForm({ router }: any) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
-    const [options, setOptions] = useState<{ teams: string[], designations: string[], managers: { name: string, code: string }[] }>({ teams: [], designations: [], managers: [] });
+    const [options, setOptions] = useState<{ teams: string[], designations: string[], managers: { name: string, code: string, role: string }[] }>({ teams: [], designations: [], managers: [] });
 
     useEffect(() => {
         const fetchOptions = async () => {
@@ -685,38 +678,28 @@ function ManualEntryForm({ router }: any) {
                         <ListSelectField label="Team / Dept" value={formData.team} onChange={(e: any) => setFormData({ ...formData, team: e.target.value })} options={options.teams} />
                         <ListSelectField label="Designation" value={formData.role} onChange={(e: any) => setFormData({ ...formData, role: e.target.value })} options={options.designations} />
 
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs text-gray-500 uppercase tracking-wider">Reporting Manager</label>
+                        <div className="flex flex-col gap-2 relative">
+                            <label className="text-xs text-gray-500 uppercase tracking-wider flex items-center gap-1">Reporting Manager <User size={12} /></label>
                             <select
                                 name="manager"
                                 value={formData.manager}
                                 onChange={handleChange}
-                                className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+                                className="appearance-none w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 pr-10 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all cursor-pointer hover:border-gray-500"
                             >
-                                <option value="">Select Manager</option>
+                                <option value="" className="text-gray-500">Select Reporting Manager</option>
                                 {options.managers.map((m) => (
-                                    <option key={m.code} value={m.name}>{m.name}</option>
+                                    <option key={m.code} value={m.name}>{m.name} ({m.role})</option>
                                 ))}
                             </select>
+                            <div className="absolute right-3 top-[34px] pointer-events-none text-gray-500">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                            </div>
                         </div>
 
                         <InputField label="Date of Joining" name="doj" type="date" value={formData.doj} onChange={handleChange} required />
                         <InputField label="Office Location" name="location" value={formData.location} onChange={handleChange} />
 
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs text-gray-500 uppercase tracking-wider">Employment Type</label>
-                            <select
-                                name="type"
-                                value={formData.type}
-                                onChange={handleChange}
-                                className="bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
-                            >
-                                <option value="Full Time">Full Time</option>
-                                <option value="Part Time">Part Time</option>
-                                <option value="Contractual">Contractual</option>
-                                <option value="Internship">Internship</option>
-                            </select>
-                        </div>
+                        <SelectField label="Employment Type" name="type" value={formData.type} onChange={handleChange} options={['Full Time', 'Part Time', 'Contractual', 'Internship']} />
 
                         <SelectField label="PF Included?" name="pf" value={formData.pf} onChange={handleChange} options={['Yes', 'No']} />
                         <SelectField label="Mediclaim Included?" name="mediclaim" value={formData.mediclaim} onChange={handleChange} options={['Yes', 'No']} />
@@ -790,18 +773,21 @@ const TextAreaField = ({ label, name, value, onChange }: { label: string, name: 
 );
 
 const SelectField = ({ label, name, value, onChange, options }: { label: string, name: string, value: string, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void, options: string[] }) => (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 relative">
         <label className="text-xs text-gray-500 uppercase tracking-wider">{label}</label>
         <select
             name={name}
             value={value}
             onChange={onChange}
-            className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors"
+            className="appearance-none w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 pr-10 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all cursor-pointer hover:border-gray-500"
         >
             {options.map((opt: string) => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt} className="bg-[#1a1a1a] text-gray-200">{opt}</option>
             ))}
         </select>
+        <div className="absolute right-3 top-[34px] pointer-events-none text-gray-500">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        </div>
     </div>
 );
 
@@ -822,23 +808,26 @@ const FileUpload = ({ label, onChange, file }: { label: string, onChange: (e: Re
     </div>
 );
 
-const ListSelectField = ({ label, value, onChange, options }: { label: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, options: string[] }) => {
+const ListSelectField = ({ label, value, onChange, options }: { label: string, value: string, onChange: (e: any) => void, options: string[] }) => {
     const listId = `list-${label.replace(/\s+/g, '-').toLowerCase()}`;
     return (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 relative">
             <label className="text-xs text-gray-500 uppercase tracking-wider">{label}</label>
             <input
                 list={listId}
                 value={value}
                 onChange={onChange}
-                className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 focus:outline-none focus:border-brand-purple transition-colors placeholder-gray-700"
                 placeholder={`Select or type ${label}`}
+                className="w-full bg-[#1a1a1a] border border-[#333] text-gray-200 rounded-lg p-3 pr-10 focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple transition-all placeholder-gray-600"
             />
             <datalist id={listId}>
                 {options.map((opt, i) => (
                     <option key={i} value={opt} />
                 ))}
             </datalist>
+            <div className="absolute right-3 top-[34px] pointer-events-none text-gray-500">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+            </div>
         </div>
     );
 };
