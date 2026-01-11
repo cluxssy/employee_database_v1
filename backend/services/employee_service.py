@@ -20,10 +20,20 @@ class EmployeeService:
         # Enrich with other data
         employee['skill_matrix'] = self.repo.get_skill_matrix(employee_code)
         employee['assets'] = self.repo.get_assets(employee_code)
-        employee['performance'] = self.repo.get_performance(employee_code)
-        employee['hr_activity'] = self.repo.get_hr_activity(employee_code)
-        employee['kra_assignments'] = self.repo.get_kra_assignments(employee_code)
+        employee['training'] = self.repo.get_hr_activity(employee_code)
         
+        # New: Quarterly Assessments
+        assessments = self.repo.get_assessments(employee_code)
+        employee['assessments'] = assessments
+        
+        # Calculate Average Score (optional logic for dashboard usage)
+        if assessments:
+             total = sum([a['total_score'] for a in assessments if a['status'] == 'Finalized'])
+             count = len([a for a in assessments if a['status'] == 'Finalized'])
+             employee['average_score'] = round(total / count, 1) if count > 0 else 0
+        else:
+             employee['average_score'] = 0
+
         return employee
 
     def create_employee(self, data: Dict[str, Any]):

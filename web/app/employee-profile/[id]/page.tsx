@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Mail, Phone, Briefcase, MapPin, Award, BookOpen, User, Monitor, FileText, TrendingUp, ClipboardCheck, Trash2, Target, Edit2, Save, ArrowRight, Settings, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Briefcase, MapPin, Award, BookOpen, User, Monitor, FileText, TrendingUp, ClipboardCheck, Trash2, Target, Edit2, Save, ArrowRight, Settings, AlertCircle, Clock, Calendar } from 'lucide-react';
 import StaggeredMenu from '../../../components/navBar';
 import Waves from '../../../components/Background/Waves';
 import { useAuth } from '../../../context/AuthContext';
@@ -85,20 +85,20 @@ interface Employee {
     skill_matrix?: SkillMatrix;
     assets?: Asset[];
     performance?: Performance[];
-    hr_activity?: HRActivity[];
-    kra_assignments?: KRAAssignment[];
+    hr_activity?: HRActivity[]; // Legacy
+    training?: HRActivity[];
+    assessments?: Assessment[];
+    average_score?: number;
 }
 
-interface KRAAssignment {
-    assignment_id: number;
-    kra_id: number;
-    period: string;
+interface Assessment {
+    id: number;
+    year: number;
+    quarter: string;
     status: string;
-    assigned_at: string;
-    kra_name: string;
-    goal_name?: string;
-    description?: string;
-    weightage?: number;
+    total_score: number;
+    percentage: number;
+    updated_at: string;
 }
 
 export default function EmployeeProfile() {
@@ -107,7 +107,7 @@ export default function EmployeeProfile() {
     const { user, isLoading: authLoading } = useAuth();
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'allocations' | 'performance'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'allocations' | 'performance' | 'training'>('overview');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showOffboardModal, setShowOffboardModal] = useState(false);
 
@@ -461,9 +461,8 @@ export default function EmployeeProfile() {
 
                     {/* Right Panel: Tabs System (Overview, Performance, Assets) */}
                     <div className="lg:col-span-2">
-                        {/* Custom Tab Switcher */}
                         <div className="flex gap-2 mb-6 bg-[#111]/60 p-1.5 rounded-2xl w-fit border border-[#222]">
-                            {['overview', 'performance', 'allocations'].map((tab) => (
+                            {['overview', 'performance', 'allocations', 'training'].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab as any)}
@@ -550,29 +549,51 @@ export default function EmployeeProfile() {
 
                             {activeTab === 'performance' && (
                                 <div className="space-y-6">
+                                    {/* Stats Row */}
+                                    {employee.average_score ? (
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                            <div className="bg-[#1a1a1a] p-4 rounded-2xl border border-[#333]">
+                                                <p className="text-xs text-gray-500 uppercase font-bold">Average Score</p>
+                                                <p className="text-2xl font-bold text-white mt-1">{employee.average_score} <span className="text-sm text-gray-500 font-normal">/ 100</span></p>
+                                            </div>
+                                        </div>
+                                    ) : null}
+
                                     <div className="bg-[#111]/60 border border-[#222] rounded-3xl p-8">
                                         <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                            <Target className="text-brand-purple" /> Goals & KRAs
+                                            <Target className="text-brand-purple" /> Assessment History
                                         </h3>
-                                        {employee.kra_assignments && employee.kra_assignments.length > 0 ? (
+
+                                        {(employee.assessments && employee.assessments.length > 0) ? (
                                             <div className="grid gap-4">
-                                                {employee.kra_assignments.map((kra: any, i: number) => (
-                                                    <div key={i} className="bg-[#1a1a1a] p-6 rounded-2xl border border-[#333] hover:border-brand-purple/40 transition-colors">
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <h4 className="font-bold text-lg">{kra.kra_name}</h4>
-                                                            <span className={`px-2 py-1 text-xs rounded font-bold ${kra.status === 'Completed' ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'}`}>
-                                                                {kra.status}
-                                                            </span>
+                                                {employee.assessments.map((assessment: any, i: number) => (
+                                                    <div key={i} className="bg-[#1a1a1a] p-6 rounded-2xl border border-[#333] hover:border-brand-purple/40 transition-colors flex justify-between items-center group cursor-pointer" onClick={() => router.push(`/performance`)}>
+                                                        <div>
+                                                            <div className="flex items-center gap-3 mb-2">
+                                                                <h4 className="font-bold text-lg text-white">{assessment.quarter} {assessment.year}</h4>
+                                                                <span className={`px-2 py-0.5 text-xs rounded font-bold uppercase ${assessment.status === 'Finalized' ? 'bg-green-500/10 text-green-400' :
+                                                                    assessment.status === 'Submitted' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-800 text-gray-400'
+                                                                    }`}>
+                                                                    {assessment.status}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-500">Last updated: {new Date(assessment.updated_at).toLocaleDateString()}</p>
                                                         </div>
-                                                        <p className="text-gray-400 text-sm mb-4">{kra.description}</p>
-                                                        <div className="w-full bg-[#222] h-1.5 rounded-full overflow-hidden">
-                                                            <div className={`h-full ${kra.status === 'Completed' ? 'bg-green-500' : 'bg-blue-500'}`} style={{ width: kra.status === 'Completed' ? '100%' : '50%' }}></div>
+
+                                                        <div className="text-right">
+                                                            <div className="text-3xl font-bold text-white mb-1 group-hover:text-brand-purple transition-colors">
+                                                                {assessment.percentage}%
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 uppercase font-bold">Total Score</p>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="text-center py-10 text-gray-500">No Performance Records Found</div>
+                                            <div className="text-center py-12 text-gray-500">
+                                                <Target size={40} className="mx-auto mb-4 opacity-20" />
+                                                <p>No assessment records found.</p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -640,62 +661,107 @@ export default function EmployeeProfile() {
                                 </div>
                             )}
 
+
+
+                            {activeTab === 'training' && (
+                                <div className="space-y-6">
+                                    <div className="bg-[#111]/60 border border-[#222] rounded-3xl p-8">
+                                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                                            <BookOpen className="text-brand-purple" /> Training History
+                                        </h3>
+                                        {employee.training && employee.training.length > 0 ? (
+                                            <div className="grid gap-4">
+                                                {employee.training.map((t: any, i: number) => (
+                                                    <div key={i} className="bg-[#1a1a1a] p-6 rounded-2xl border border-[#333] flex justify-between items-center">
+                                                        <div>
+                                                            <h4 className="font-bold text-lg text-white mb-1">{t.training_assigned}</h4>
+                                                            <div className="flex gap-4 text-sm text-gray-500">
+                                                                <span className="flex items-center gap-1"><Clock size={14} /> {t.training_duration}</span>
+                                                                <span className="flex items-center gap-1"><Calendar size={14} /> {t.training_date}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <span className={`px-3 py-1 text-xs rounded-full font-bold uppercase ${t.training_status === 'Completed' ? 'bg-green-500/10 text-green-400' :
+                                                                t.training_status === 'In Progress' ? 'bg-blue-500/10 text-blue-400' : 'bg-yellow-500/10 text-yellow-500'
+                                                                }`}>
+                                                                {t.training_status}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12 text-gray-500">
+                                                <BookOpen size={40} className="mx-auto mb-4 opacity-20" />
+                                                <p>No training records found.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     </div>
                 </div>
 
                 {/* Admin Zone - Offboarding & Deletion */}
-                {canDelete && (
-                    <div className="mt-20 pt-10 border-t border-[#222]">
-                        <div className="flex justify-between items-center">
-                            <p className="text-sm text-gray-500 font-bold uppercase tracking-wider">Admin Actions</p>
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={() => setShowOffboardModal(true)}
-                                    className="bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-500 border border-yellow-800 px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
-                                >
-                                    <AlertCircle size={16} /> Offboard Employee
-                                </button>
+                {
+                    canDelete && (
+                        <div className="mt-20 pt-10 border-t border-[#222]">
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-gray-500 font-bold uppercase tracking-wider">Admin Actions</p>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowOffboardModal(true)}
+                                        className="bg-yellow-600/20 hover:bg-yellow-600/40 text-yellow-500 border border-yellow-800 px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+                                    >
+                                        <AlertCircle size={16} /> Offboard Employee
+                                    </button>
 
-                                <button
-                                    onClick={() => setShowDeleteConfirm(true)}
-                                    className="text-red-500 hover:bg-red-500/10 px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
-                                >
-                                    <Trash2 size={16} /> Delete Permanent
-                                </button>
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(true)}
+                                        className="text-red-500 hover:bg-red-500/10 px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                                    >
+                                        <Trash2 size={16} /> Delete Permanent
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* Offboard Confirmation Modal */}
-                {showOffboardModal && (
-                    <OffboardModal
-                        employee={employee}
-                        onClose={() => setShowOffboardModal(false)}
-                        onSuccess={() => {
-                            setShowOffboardModal(false);
-                            fetchEmployeeDetails(employee.employee_code); // Refresh data
-                        }}
-                    />
-                )}
+                {
+                    showOffboardModal && (
+                        <OffboardModal
+                            employee={employee}
+                            onClose={() => setShowOffboardModal(false)}
+                            onSuccess={() => {
+                                setShowOffboardModal(false);
+                                fetchEmployeeDetails(employee.employee_code); // Refresh data
+                            }}
+                        />
+                    )
+                }
 
                 {/* Delete Confirmation Modal */}
-                {showDeleteConfirm && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-[#111] border border-red-900/50 rounded-2xl p-8 max-w-md w-full shadow-2xl">
-                            <h3 className="text-xl font-bold text-white mb-4">Confirm Deletion</h3>
-                            <p className="text-gray-300 mb-6">This will permanently remove {employee.name}. This action cannot be undone.</p>
-                            <div className="flex gap-3">
-                                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-3 bg-[#222] hover:bg-[#333] text-white rounded-lg transition-colors font-medium">Cancel</button>
-                                <button onClick={handleDeleteEmployee} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-bold">Delete</button>
+                {
+                    showDeleteConfirm && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-[#111] border border-red-900/50 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+                                <h3 className="text-xl font-bold text-white mb-4">Confirm Deletion</h3>
+                                <p className="text-gray-300 mb-6">This will permanently remove {employee.name}. This action cannot be undone.</p>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-4 py-3 bg-[#222] hover:bg-[#333] text-white rounded-lg transition-colors font-medium">Cancel</button>
+                                    <button onClick={handleDeleteEmployee} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-bold">Delete</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }
 

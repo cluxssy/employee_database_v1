@@ -179,9 +179,17 @@ class AttendanceService:
                 else:
                     try:
                         dt = datetime(year, month, day)
+                        dt_date = dt.date()
+                        today_date = datetime.now().date()
+                        
                         if dt.weekday() >= 5: 
                             status = 'Weekend'
+                        elif dt_date > today_date:
+                            status = 'Future'
+                        elif dt_date == today_date:
+                            status = 'Pending' # Today, but not clocked in yet
                         else:
+                            status = 'Absent'
                             absent_count += 1
                     except:
                         pass

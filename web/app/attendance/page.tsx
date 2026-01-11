@@ -517,11 +517,13 @@ function ManagerSection() {
                                                         {emp.name}
                                                     </td>
                                                     {emp.days.map((day: any) => {
-                                                        let colorClass = 'bg-gray-800/20'; // Default/Absent
+                                                        let colorClass = 'bg-gray-800/20'; // Default
                                                         if (day.status === 'Present') colorClass = 'bg-green-500';
                                                         else if (day.status === 'Leave') colorClass = 'bg-blue-500';
                                                         else if (day.status === 'Weekend') colorClass = 'bg-gray-800';
                                                         else if (day.status === 'Absent') colorClass = 'bg-red-500/20 border border-red-500/50';
+                                                        else if (day.status === 'Pending') colorClass = 'bg-yellow-500/20 border border-yellow-500/50'; // Today
+                                                        else if (day.status === 'Future') colorClass = 'bg-gray-800/10 opacity-30';
 
                                                         return (
                                                             <td key={day.day} className="p-1 text-center group relative">

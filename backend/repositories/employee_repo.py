@@ -55,29 +55,21 @@ class EmployeeRepository:
         finally:
             conn.close()
 
-    def get_kra_assignments(self, employee_code: str) -> List[Dict[str, Any]]:
+    def get_assessments(self, employee_code: str) -> List[Dict[str, Any]]:
         conn = get_db_connection()
         try:
             rows = conn.execute("""
                 SELECT 
-                    ka.id as assignment_id,
-                    ka.kra_id,
-                    ka.period,
-                    ka.status,
-                    ka.self_rating,
-                    ka.manager_rating,
-                    ka.final_score,
-                    ka.self_comment,
-                    ka.manager_comment,
-                    ka.assigned_at,
-                    kl.name as kra_name,
-                    kl.goal_name,
-                    kl.description,
-                    kl.weightage
-                FROM kra_assignments ka
-                JOIN kra_library kl ON ka.kra_id = kl.id
-                WHERE ka.employee_code = ?
-                ORDER BY ka.assigned_at DESC
+                    id,
+                    year,
+                    quarter,
+                    status,
+                    total_score,
+                    percentage,
+                    updated_at
+                FROM quarterly_assessments
+                WHERE employee_code = ?
+                ORDER BY year DESC, quarter DESC
             """, (employee_code,)).fetchall()
             return [dict(r) for r in rows]
         except Exception:
